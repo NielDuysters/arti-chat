@@ -44,6 +44,7 @@
 
 use tracing_subscriber;
 
+pub mod client;
 pub mod error;
 
 /// Run daemon and start all required services.
