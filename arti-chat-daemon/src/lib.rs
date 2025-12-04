@@ -42,9 +42,17 @@
 #![allow(clippy::needless_lifetimes)] 
 #![allow(mismatched_lifetime_syntaxes)]
 
+use tracing_subscriber;
+
 pub mod error;
 
 /// Run daemon and start all required services.
 pub async fn run() -> Result<(), error::DaemonError> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::TRACE)
+        .init();
+
+    tracing::info!("Daemon entrypoint reached.");
+
     Ok(())
 }
