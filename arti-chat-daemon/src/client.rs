@@ -2,7 +2,8 @@
 //! services like the database, onion service,...
 
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
-use crate::error;
+use crate::{db, error};
+use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
 use futures::Stream;
 use tokio::sync::Mutex as TokioMutex;
 
@@ -24,6 +25,12 @@ pub struct Client {
 
     /// Database connection.
     db_conn: DatabaseConnection,
+
+    /// Private key of user to sign chat messages.
+    private_key: SigningKey,
+
+    /// Public key of user to verify received chat messages.
+    public_key: VerifyingKey,
 }
 
 impl Client {
@@ -37,12 +44,31 @@ impl Client {
         let (onion_service, request_stream) = Self::launch_onion_service(&tor_client).await?;
         let request_stream = TokioMutex::new(Box::into_pin(request_stream));
 
-        tracing::info!("ArtiChat client launched.");
+        // Generate new keypair.
+        let (private_key, public_key) = Self::generate_keypair()?;
 
+        // Store user with newly generated keypair.
+        // Note that if the user with the given onion_id already exists
+        // the user will not be inserted nor updated.
+        let onion_id = Self::get_identity_unredacted_inner(onion_service.onion_address())?;
+        db::UserDb {
+            onion_id: onion_id.to_string(),
+            nickname: "Me".to_string(),
+            private_key,
+            public_key,
+        }.insert(db_conn.clone()).await?;
+
+        // Retrieve user again to get actual stored keypair.
+        let user: db::UserDb = db::UserDb::retrieve(db_conn.clone(), &onion_id).await?;
+        let (private_key, public_key) = Self::get_validated_keypair(&user.private_key, &user.public_key)?;
+
+        tracing::info!("ArtiChat client launched.");
         Ok(Self {
             tor_client,
             onion_service,
             request_stream,
+            private_key,
+            public_key,
             db_conn,
         })
     }
@@ -85,5 +111,44 @@ impl Client {
         tracing::info!("Onion service launched.");
     
         Ok((onion_service, request_stream))
+    }
+    
+    fn get_identity_unredacted_inner(onion_address: Option<arti_client::HsId>) -> Result<String, error::ClientError> {
+        onion_address
+            .ok_or(error::ClientError::EmptyHsid)
+            .map(|address| safelog::DispUnredacted(address).to_string())
+    }
+
+    // Generate + store keypair to sign and verify chat messages.
+    fn generate_keypair() -> Result<(String, String), error::ClientError> 
+    {
+        // Generate new keypair.
+        let private_key = SigningKey::generate(&mut rand_core::OsRng);
+        let public_key : [u8; PUBLIC_KEY_LENGTH] = private_key.verifying_key().to_bytes();
+        let private_key : [u8; SECRET_KEY_LENGTH] = private_key.to_bytes();
+        let public_key = hex::encode(public_key);
+        let private_key = hex::encode(private_key);
+
+        Ok((private_key, public_key))
+    }
+
+    // Get keypair from user and return if valid.
+    fn get_validated_keypair(private_key: &str, public_key: &str) -> Result<(SigningKey, VerifyingKey), error::ClientError> {
+        let private_key_b = hex::decode(private_key)?;
+        let public_key_b = hex::decode(public_key)?;
+
+        if private_key_b.len() != SECRET_KEY_LENGTH || public_key_b.len() != PUBLIC_KEY_LENGTH {
+            return Err(error::ClientError::InvalidKeyLength);
+        }
+
+        let mut private_key = [0u8; SECRET_KEY_LENGTH];
+        let mut public_key = [0u8; PUBLIC_KEY_LENGTH];
+        private_key.copy_from_slice(&private_key_b);
+        public_key.copy_from_slice(&public_key_b);
+
+        Ok((
+            SigningKey::from_bytes(&private_key),
+            VerifyingKey::from_bytes(&public_key)?,
+        ))
     }
 }

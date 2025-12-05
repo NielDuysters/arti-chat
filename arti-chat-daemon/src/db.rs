@@ -2,11 +2,9 @@
 
 use crate::error;
 use rusqlite::{Connection, params};
+use tokio::sync::Mutex as TokioMutex;
 
-fn database_path(project_dir: std::path::PathBuf) -> Result<std::path::PathBuf, error::DatabaseError> {
-    let path = project_dir.join("arti-chat.db");
-    Ok(path)
-}
+type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
 
 /// Create database tables + return connection.
 pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection, error::DatabaseError> {
@@ -48,4 +46,67 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
     tracing::debug!("Database connection established");
 
     Ok(conn)
+}
+
+/// Represents row in user table.
+pub struct UserDb {
+    /// Column onion_id.
+    pub onion_id: String,
+
+    /// Column nickname.
+    pub nickname: String,
+
+    /// Column private_key.
+    pub private_key: String,
+
+    /// Column public_key.
+    pub public_key: String,
+}
+
+impl UserDb {
+    /// Insert new user.
+    /// If an user with given onion_id already exists, the user is not inserted nor updated.
+    pub async fn insert(&self, conn: DatabaseConnection) -> Result<(), error::DatabaseError> {
+        let conn = conn.lock().await;
+        conn.execute(
+            "INSERT INTO user
+                (onion_id, nickname, private_key, public_key)
+            VALUES
+                (?, ?, ?, ?)",
+            params![
+                self.onion_id,
+                self.nickname,
+                self.private_key,
+                self.public_key,
+            ]
+        )?;
+
+        Ok(())
+    }
+
+    /// Retrieve user by onion_id.
+    pub async fn retrieve(conn: DatabaseConnection, onion_id: &str) -> Result<Self, error::DatabaseError> {
+        let conn = conn.lock().await;
+        conn.query_row(
+            "SELECT
+                onion_id, nickname, private_key, public_key
+            FROM user
+            WHERE onion_id = ?",
+            params![onion_id],
+            |row| {
+                Ok(Self {
+                    onion_id: row.get(0)?,
+                    nickname: row.get(1)?,
+                    private_key: row.get(2)?,
+                    public_key: row.get(3)?,
+                })
+            }
+        ).map_err(Into::into)
+    }
+}
+
+
+fn database_path(project_dir: std::path::PathBuf) -> Result<std::path::PathBuf, error::DatabaseError> {
+    let path = project_dir.join("arti-chat.db");
+    Ok(path)
 }

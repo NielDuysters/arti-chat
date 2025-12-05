@@ -23,7 +23,7 @@ pub enum DaemonError {
 }
 
 /// Errors related to client.
-#[derive(Error, Clone, Debug)]
+#[derive(Error, Debug)]
 pub enum ClientError {
     /// Error in Arti TorClient.
     #[error("Tor Client error: {0}")]
@@ -44,6 +44,22 @@ pub enum ClientError {
     /// Empty HsId.
     #[error("Empty Hsid.")]
     EmptyHsid,
+    
+    /// Database Error.
+    #[error("Database error: {0}")]
+    DatabaseError(#[from] DatabaseError),
+    
+    /// Hex decode error.
+    #[error("Hex decode error: {0}")]
+    HexDecodeError(#[from] hex::FromHexError),
+
+    /// Invalid key length.
+    #[error("Key length is not 32 bytes.")]
+    InvalidKeyLength,
+    
+    /// Ed25519 error.
+    #[error("ed25519 error: {0}")]
+    Ed25519Error(#[from] ed25519_dalek::ed25519::Error),
 }
 
 /// Errors related to database.
