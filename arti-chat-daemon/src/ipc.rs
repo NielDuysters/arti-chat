@@ -74,6 +74,32 @@ pub async fn run_ipc_server() -> Result<(), IpcError> {
             // New RPC request.
             Ok((stream, _)) = rpc_listener.accept() => {
                 tracing::debug!("UI sent a RPC request.");
+
+                // Write_half is pipe back to the UI.
+                // Read_half is required because we want to read the RPC command and it's
+                // arguments.
+                let (read_half, write_half) = stream.into_split();
+                
+                // - tx_writer: Allows daemon to transmit message to UI.
+                // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
+                //              write to `write_half`.
+                let (tx_writer, rx_writer) = mpsc::unbounded_channel();
+
+                // Get latest broadcast_writer to send broadcast messages to UI.
+                let tx_broadcast = broadcast_writers
+                    .lock()
+                    .await
+                    .last()
+                    .cloned();
+
+                // Start ui_write_loop with write_half and rx_writer.
+                // When daemon uses tx_writer (via broadcast_writers) to write
+                // a message to the UI, rx_writer will read it and forward it
+                // to write_half which is the pipe back to the UI.
+                tokio::spawn(ui_write_loop(rx_writer, write_half));
+
+                // Handle incoming RPC request.
+                tokio::spawn(handle_rpc_call(read_half, tx_writer, tx_broadcast));
             }
         }
     }
@@ -94,5 +120,24 @@ async fn ui_write_loop(
             tracing::error!("IPC error writing to UI: {}", e);
             return; // Broken pipe.
         }
+    }
+}
+
+// Handle a RPC call coming from the UI.
+async fn handle_rpc_call(
+    read_half: OwnedReadHalf,                               // Read incoming RPC call.
+    tx_writer: UnboundedSender<MessageToUI>,                // Reply to current RPC call.
+    tx_broadcast: Option<UnboundedSender<MessageToUI>>,     // Write to UI.
+) {
+
+    // Convert incoming RPC call to lines.
+    let mut lines = BufReader::new(read_half).lines();
+
+    while let Ok(Some(line)) = lines.next_line().await {
+        if line.trim().is_empty() {
+            continue; // Skip empty line.
+        }
+
+        tracing::debug!("Imcoming RPC command from UI: {}", line);
     }
 }
