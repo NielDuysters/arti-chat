@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 arti-client = { version =  "0.37.0", features = ["onion-service-client", "onion-service-service", "experimental-api"] }
 futures = "0.3.31"
+safelog = "0.7.1"
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-util = { version = "0.7.17", features = ["codec"]}

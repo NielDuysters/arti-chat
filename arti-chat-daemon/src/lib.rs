@@ -48,5 +48,10 @@ pub mod error;
 /// Run daemon and start all required services.
 pub async fn run() -> Result<(), error::DaemonError> {
     tracing::info!("Daemon entrypoint reached.");
+
+    let client = client::Client::launch().await?;
+    let onion_address = client.get_identity_unredacted()?;
+    tracing::info!("Onion address: {}", onion_address);
+
     Ok(())
 }

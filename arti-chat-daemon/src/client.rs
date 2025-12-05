@@ -43,6 +43,15 @@ impl Client {
         })
     }
 
+    /// Get onion service identity unredacted.
+    /// Warning: This displays the full hidden service onion url.
+    pub fn get_identity_unredacted(&self) -> Result<String, error::ClientError> {
+        self.onion_service
+            .onion_address()
+            .ok_or(error::ClientError::EmptyHsid)
+            .map(|address| safelog::DispUnredacted(address).to_string())
+    }
+
     async fn bootstrap_tor_client() -> Result<ArtiTorClient, error::ClientError> {
         let config = arti_client::TorClientConfig::default();
         let client = arti_client::TorClient::create_bootstrapped(config).await?;

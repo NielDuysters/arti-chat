@@ -8,6 +8,10 @@ pub enum DaemonError {
     /// Error running daemon.
     #[error("Error running daemon.")]
     RunError(String),
+    
+    /// Error in client.
+    #[error("Arti Chat Client error: {0}")]
+    ClientError(#[from] ClientError),
 }
 
 /// Errors related to client.
@@ -28,4 +32,8 @@ pub enum ClientError {
     /// Failed to build Arti config.
     #[error("Failed to build Arti config: {0}")]
     ArtiConfigBuildError(#[from] arti_client::config::ConfigBuildError),
+    
+    /// Empty HsId.
+    #[error("Empty Hsid.")]
+    EmptyHsid,
 }
