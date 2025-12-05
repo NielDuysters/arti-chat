@@ -60,6 +60,14 @@ pub enum ClientError {
     /// Ed25519 error.
     #[error("ed25519 error: {0}")]
     Ed25519Error(#[from] ed25519_dalek::ed25519::Error),
+    
+    /// Internal Arti bug.
+    #[error("Internal Arti bug")]
+    ArtiBug,
+    
+    /// HiddenServiceClientError.
+    #[error("Arti HiddenServiceClientError: {0}")]
+    ArtiHiddenServiceClientError(#[from] tor_hsservice::ClientError),
 }
 
 /// Errors related to database.

@@ -60,12 +60,18 @@ pub async fn run() -> Result<(), error::DaemonError> {
 
     let project_dir = create_project_dir()?;
 
+    // Create database connection.
     let db_conn = db::init_database(project_dir).await?;
     let db_conn = std::sync::Arc::new(TokioMutex::new(db_conn));
 
+    // Create Tor client + launch hidden service.
     let client = client::Client::launch(db_conn).await?;
     let onion_address = client.get_identity_unredacted()?;
     tracing::info!("Onion address: {}", onion_address);
+
+    // Service hidden service.
+    client.serve().await?;
+
 
     Ok(())
 }

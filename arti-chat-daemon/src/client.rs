@@ -4,8 +4,10 @@
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use crate::{db, error};
 use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
-use futures::Stream;
+use futures::{AsyncReadExt, Stream, StreamExt};
 use tokio::sync::Mutex as TokioMutex;
+use tor_cell::relaycell::msg::Connected;
+use tor_proto::client::stream::IncomingStreamRequest;
 
 type ArtiTorClient = arti_client::TorClient<tor_rtcompat::PreferredRuntime>;
 type OnionServiceRequestStream = Box<dyn Stream<Item = tor_hsservice::RendRequest> + Send>;
@@ -51,12 +53,12 @@ impl Client {
         // Note that if the user with the given onion_id already exists
         // the user will not be inserted nor updated.
         let onion_id = Self::get_identity_unredacted_inner(onion_service.onion_address())?;
-        db::UserDb {
+        let _ = db::UserDb {
             onion_id: onion_id.to_string(),
             nickname: "Me".to_string(),
             private_key,
             public_key,
-        }.insert(db_conn.clone()).await?;
+        }.insert(db_conn.clone()).await;
 
         // Retrieve user again to get actual stored keypair.
         let user: db::UserDb = db::UserDb::retrieve(db_conn.clone(), &onion_id).await?;
@@ -71,6 +73,21 @@ impl Client {
             public_key,
             db_conn,
         })
+    }
+
+    /// Main entrypoint/loop to accept requests from our hidden onion service.
+    pub async fn serve(&self) -> Result<(), error::ClientError> {
+        let mut request_stream = self.request_stream.lock().await;
+        let requests = tor_hsservice::handle_rend_requests(&mut *request_stream);
+        tokio::pin!(requests);
+
+        while let Some(request) = requests.next().await {
+            tokio::spawn(async move {
+                let _ = Self::handle_request(request).await;
+            });
+        }
+
+        Ok(())
     }
 
     /// Get onion service identity unredacted.
@@ -150,5 +167,46 @@ impl Client {
             SigningKey::from_bytes(&private_key),
             VerifyingKey::from_bytes(&public_key)?,
         ))
+    }
+
+    // Handle request from client to open new stream to our onion service.
+    async fn handle_request(request: tor_hsservice::StreamRequest) -> Result<(), error::ClientError> {
+        match request.request() {
+            IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
+                // Incoming request is a Begin message.
+
+                // Accept request and get DataStream.
+                let mut stream = request.accept(Connected::new_empty()).await?;
+
+                // Read buffer.
+                let mut read_buffer = std::vec::Vec::new();
+                // We read stream byte-by-byte to handle bug in Arti with EndReason::Misc error.
+                let mut byte = [0u8; 1];
+
+                loop {
+                    if let Ok(_) = stream.read_exact(&mut byte).await {
+                        // We expect each message to end with a null-byte.
+                        if byte[0] == 0 {
+                            break;
+                        }
+                        read_buffer.push(byte[0]);
+                    }
+                }
+
+                if read_buffer.is_empty() {
+                    return Ok(());
+                }
+
+                let body = String::from_utf8_lossy(&read_buffer);
+
+                tracing::debug!("Received request: {}", body);
+
+                Ok(())
+            },
+            _ => {
+                request.shutdown_circuit().expect("Failed to shutdown circuit.");
+                Ok(())
+            }
+        }
     }
 }
