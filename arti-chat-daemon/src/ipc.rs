@@ -1,6 +1,7 @@
 //! Logic to communicate between the daemon and the desktop app using Inter-process communication.
 
 use crate::error::IpcError;
+use futures::io::WriteHalf;
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::{UnixListener, UnixStream},
@@ -52,6 +53,22 @@ pub async fn run_ipc_server() -> Result<(), IpcError> {
             Ok((stream, _)) = broadcast_listener.accept() => {
                 tracing::debug!("UI subscribed to IPC broadcast channel.");
 
+                // Write_half is pipe back to the UI.
+                let (_, write_half) = stream.into_split();
+               
+                // - tx_writer: Allows daemon to transmit message to UI.
+                // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
+                //              write to `write_half`.
+                let (tx_writer, rx_writer) = mpsc::unbounded_channel();
+
+                // Push tx_writer writer to broadcast_writers so this UI also receives messages.
+                broadcast_writers.lock().await.push(tx_writer.clone());
+
+                // Start ui_write_loop with write_half and rx_writer.
+                // When daemon uses tx_writer (via broadcast_writers) to write
+                // a message to the UI, rx_writer will read it and forward it
+                // to write_half which is the pipe back to the UI.
+                tokio::spawn(ui_write_loop(rx_writer, write_half));
             }
 
             // New RPC request.
@@ -61,3 +78,21 @@ pub async fn run_ipc_server() -> Result<(), IpcError> {
         }
     }
 } 
+
+// Writes to UI whenever daemon demands it.
+async fn ui_write_loop(
+    mut rx: mpsc::UnboundedReceiver<MessageToUI>,   // Receives messages pushed by daemon.
+    mut write_half: OwnedWriteHalf,                 // Writer handle to UI.
+) {
+    while let Some(msg) = rx.recv().await {
+        let msg = match msg {
+            MessageToUI::Broadcast(m) => m,
+            MessageToUI::Rpc(m) => m,
+        };
+
+        if let Err(e) = write_half.write_all(msg.as_bytes()).await {
+            tracing::error!("IPC error writing to UI: {}", e);
+            return; // Broken pipe.
+        }
+    }
+}
