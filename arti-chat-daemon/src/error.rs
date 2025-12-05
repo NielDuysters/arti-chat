@@ -3,7 +3,7 @@
 use thiserror::Error;
 
 /// Errors related to daemon.
-#[derive(Error, Clone, Debug)]
+#[derive(Error, Debug)]
 pub enum DaemonError {
     /// Error running daemon.
     #[error("Error running daemon.")]
@@ -12,6 +12,14 @@ pub enum DaemonError {
     /// Error in client.
     #[error("Arti Chat Client error: {0}")]
     ClientError(#[from] ClientError),
+
+    /// I/O Error.
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+    
+    /// Database Error.
+    #[error("Database error: {0}")]
+    DatabaseError(#[from] DatabaseError),
 }
 
 /// Errors related to client.
@@ -36,4 +44,16 @@ pub enum ClientError {
     /// Empty HsId.
     #[error("Empty Hsid.")]
     EmptyHsid,
+}
+
+/// Errors related to database.
+#[derive(Error, Debug)]
+pub enum DatabaseError {
+    /// I/O Error.
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+
+    /// Rusqlite error.
+    #[error("rusqlite error: {0}")]
+    RusqliteError(#[from] rusqlite::Error),
 }

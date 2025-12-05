@@ -42,16 +42,39 @@
 #![allow(clippy::needless_lifetimes)] 
 #![allow(mismatched_lifetime_syntaxes)]
 
+use tokio::sync::Mutex as TokioMutex;
+
+pub mod db;
 pub mod client;
 pub mod error;
+
+/// Project directory storing sqlite db + config.
+pub static PROJECT_DIR: once_cell::sync::Lazy<directories::ProjectDirs> = once_cell::sync::Lazy::new(|| {
+    directories::ProjectDirs::from("com", "arti-chat", "desktop")
+        .expect("Failed to determine project directories")
+});
 
 /// Run daemon and start all required services.
 pub async fn run() -> Result<(), error::DaemonError> {
     tracing::info!("Daemon entrypoint reached.");
+
+    let project_dir = create_project_dir()?;
+
+    let db_conn = db::init_database(project_dir).await?;
+    let db_conn = std::sync::Arc::new(TokioMutex::new(db_conn));
 
     let client = client::Client::launch().await?;
     let onion_address = client.get_identity_unredacted()?;
     tracing::info!("Onion address: {}", onion_address);
 
     Ok(())
+}
+
+fn create_project_dir() -> Result<std::path::PathBuf, error::DaemonError> {
+    let path = PROJECT_DIR.data_local_dir();
+    std::fs::create_dir_all(path)?;
+
+    tracing::info!("Created project directory: {:?}", path);
+
+    Ok(path.to_path_buf())
 }

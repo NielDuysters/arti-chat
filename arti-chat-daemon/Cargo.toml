@@ -5,7 +5,10 @@ edition = "2024"
 
 [dependencies]
 arti-client = { version =  "0.37.0", features = ["onion-service-client", "onion-service-service", "experimental-api"] }
+directories = "6.0.0"
 futures = "0.3.31"
+once_cell = "1.21.3"
+rusqlite = { version = "0.37", features = ["bundled"] }
 safelog = "0.7.1"
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
