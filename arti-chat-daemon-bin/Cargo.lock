@@ -114,6 +114,7 @@ version = "0.1.0"
 dependencies = [
  "arti-client",
  "futures",
+ "safelog",
  "thiserror 2.0.17",
  "tokio",
  "tokio-util",
