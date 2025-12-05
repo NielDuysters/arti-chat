@@ -48,6 +48,7 @@ pub mod db;
 pub mod client;
 pub mod error;
 pub mod ipc;
+pub mod rpc;
 
 /// Project directory storing sqlite db + config.
 pub static PROJECT_DIR: once_cell::sync::Lazy<directories::ProjectDirs> = once_cell::sync::Lazy::new(|| {

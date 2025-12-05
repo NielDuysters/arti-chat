@@ -1,6 +1,6 @@
 //! Logic to communicate between the daemon and the desktop app using Inter-process communication.
 
-use crate::error::IpcError;
+use crate::{error::IpcError, rpc};
 use futures::io::WriteHalf;
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -26,7 +26,7 @@ enum MessageToUI {
 
 /// Run our IPC server.
 pub async fn run_ipc_server() -> Result<(), IpcError> {
-    
+
     // Bind broadcast socket.
     // Used for fire and forget-messages for when we do not expect a reply from the UI.
     // E.g: When the daemon wants to push an incoming message to the UI.
@@ -48,28 +48,28 @@ pub async fn run_ipc_server() -> Result<(), IpcError> {
 
     loop {
         tokio::select! {
-            
-            // New broadcast subscriber.
-            Ok((stream, _)) = broadcast_listener.accept() => {
-                tracing::debug!("UI subscribed to IPC broadcast channel.");
 
-                // Write_half is pipe back to the UI.
-                let (_, write_half) = stream.into_split();
-               
-                // - tx_writer: Allows daemon to transmit message to UI.
-                // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
-                //              write to `write_half`.
-                let (tx_writer, rx_writer) = mpsc::unbounded_channel();
+        // New broadcast subscriber.
+        Ok((stream, _)) = broadcast_listener.accept() => {
+            tracing::debug!("UI subscribed to IPC broadcast channel.");
 
-                // Push tx_writer writer to broadcast_writers so this UI also receives messages.
-                broadcast_writers.lock().await.push(tx_writer.clone());
+            // Write_half is pipe back to the UI.
+            let (_, write_half) = stream.into_split();
 
-                // Start ui_write_loop with write_half and rx_writer.
-                // When daemon uses tx_writer (via broadcast_writers) to write
-                // a message to the UI, rx_writer will read it and forward it
-                // to write_half which is the pipe back to the UI.
-                tokio::spawn(ui_write_loop(rx_writer, write_half));
-            }
+            // - tx_writer: Allows daemon to transmit message to UI.
+            // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
+            //              write to `write_half`.
+            let (tx_writer, rx_writer) = mpsc::unbounded_channel();
+
+            // Push tx_writer writer to broadcast_writers so this UI also receives messages.
+            broadcast_writers.lock().await.push(tx_writer.clone());
+
+            // Start ui_write_loop with write_half and rx_writer.
+            // When daemon uses tx_writer (via broadcast_writers) to write
+            // a message to the UI, rx_writer will read it and forward it
+            // to write_half which is the pipe back to the UI.
+            tokio::spawn(ui_write_loop(rx_writer, write_half));
+        }
 
             // New RPC request.
             Ok((stream, _)) = rpc_listener.accept() => {
@@ -79,7 +79,7 @@ pub async fn run_ipc_server() -> Result<(), IpcError> {
                 // Read_half is required because we want to read the RPC command and it's
                 // arguments.
                 let (read_half, write_half) = stream.into_split();
-                
+
                 // - tx_writer: Allows daemon to transmit message to UI.
                 // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
                 //              write to `write_half`.
@@ -139,5 +139,21 @@ async fn handle_rpc_call(
         }
 
         tracing::debug!("Imcoming RPC command from UI: {}", line);
+
+        let cmd: rpc::RpcCommand = match serde_json::from_str(&line) {
+            Ok(c) => c,
+            Err(e) => {
+                let _ = tx_writer.send(MessageToUI::Rpc(
+                    format!(r#"{{"error":"Bad JSON: {}"}}"#, e)
+                ));
+                continue;
+            }
+        };
+
+        match cmd {
+            rpc::RpcCommand::LoadContacts => {
+                let _ = tx_writer.send(MessageToUI::Rpc("xxx".to_string()));
+            }
+        }
     }
 }
