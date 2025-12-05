@@ -15,6 +15,14 @@ type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>;
 const RPC_SOCK: &str = "/tmp/arti-chat.rpc.sock";
 const BROADCAST_SOCK: &str = "/tmp/arti-chat.broadcast.sock";
 
+// Type of message to UI.
+enum MessageToUI {
+    // Broadcast.
+    Broadcast(String),
+    // RPC command.
+    Rpc(String),
+}
+
 /// Run our IPC server.
 pub async fn run_ipc_server() -> Result<(), IpcError> {
     
@@ -32,5 +40,24 @@ pub async fn run_ipc_server() -> Result<(), IpcError> {
     let rpc_listener = UnixListener::bind(RPC_SOCK)?;
     tracing::info!("RPC IPC listening at: {}", RPC_SOCK);
 
-    Ok(())
+    // List of outgoing channels to subscribed UI.
+    let broadcast_writers = std::sync::Arc::new(TokioMutex::new(
+        std::vec::Vec::<UnboundedSender<MessageToUI>>::new()
+    ));
+
+    loop {
+        tokio::select! {
+            
+            // New broadcast subscriber.
+            Ok((stream, _)) = broadcast_listener.accept() => {
+                tracing::debug!("UI subscribed to IPC broadcast channel.");
+
+            }
+
+            // New RPC request.
+            Ok((stream, _)) = rpc_listener.accept() => {
+                tracing::debug!("UI sent a RPC request.");
+            }
+        }
+    }
 } 
