@@ -81,3 +81,15 @@ pub enum DatabaseError {
     #[error("rusqlite error: {0}")]
     RusqliteError(#[from] rusqlite::Error),
 }
+
+/// Errors related to IPC server.
+#[derive(Error, Debug)]
+pub enum IpcError {
+    /// I/O Error.
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+
+    /// Rusqlite error.
+    #[error("rusqlite error: {0}")]
+    RusqliteError(#[from] rusqlite::Error),
+}

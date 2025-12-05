@@ -47,6 +47,7 @@ use tokio::sync::Mutex as TokioMutex;
 pub mod db;
 pub mod client;
 pub mod error;
+pub mod ipc;
 
 /// Project directory storing sqlite db + config.
 pub static PROJECT_DIR: once_cell::sync::Lazy<directories::ProjectDirs> = once_cell::sync::Lazy::new(|| {
