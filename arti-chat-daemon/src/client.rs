@@ -8,6 +8,7 @@ use tokio::sync::Mutex as TokioMutex;
 
 type ArtiTorClient = arti_client::TorClient<tor_rtcompat::PreferredRuntime>;
 type OnionServiceRequestStream = Box<dyn Stream<Item = tor_hsservice::RendRequest> + Send>;
+type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
 
 /// Encapsulates hidden service, database connection,...
 pub struct Client {
@@ -21,12 +22,14 @@ pub struct Client {
     /// We have to store it seperately because we can't derive it after `launch_onion_service`.
     request_stream: TokioMutex<std::pin::Pin<OnionServiceRequestStream>>,
 
+    /// Database connection.
+    db_conn: DatabaseConnection,
 }
 
 impl Client {
     /// Launch chat client.
     /// Bootstrap TorClient + launch onion service + ...
-    pub async fn launch() -> Result<Self, error::ClientError> {
+    pub async fn launch(db_conn: DatabaseConnection) -> Result<Self, error::ClientError> {
         // Create Tor Client.
         let tor_client = Self::bootstrap_tor_client().await?;
 
@@ -40,6 +43,7 @@ impl Client {
             tor_client,
             onion_service,
             request_stream,
+            db_conn,
         })
     }
 

@@ -63,7 +63,7 @@ pub async fn run() -> Result<(), error::DaemonError> {
     let db_conn = db::init_database(project_dir).await?;
     let db_conn = std::sync::Arc::new(TokioMutex::new(db_conn));
 
-    let client = client::Client::launch().await?;
+    let client = client::Client::launch(db_conn).await?;
     let onion_address = client.get_identity_unredacted()?;
     tracing::info!("Onion address: {}", onion_address);
 
