@@ -2,6 +2,8 @@
 
 use thiserror::Error;
 
+use crate::ipc::MessageToUI;
+
 /// Errors related to daemon.
 #[derive(Error, Debug)]
 pub enum DaemonError {
@@ -92,4 +94,24 @@ pub enum IpcError {
     /// Rusqlite error.
     #[error("rusqlite error: {0}")]
     RusqliteError(#[from] rusqlite::Error),
+}
+
+/// Errors related to RPC.
+#[derive(Error, Debug)]
+pub enum RpcError {
+    /// I/O Error.
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+    
+    /// Serde Json Error.
+    #[error("serde_json error: {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
+    
+    /// Mpsc send error.
+    #[error("mpsc send error: {0}")]
+    MpscSendError(#[from] tokio::sync::mpsc::error::SendError<MessageToUI>),
+    
+    /// Database error.
+    #[error("Database error: {0}")]
+    DatabaseError(#[from] DatabaseError),
 }

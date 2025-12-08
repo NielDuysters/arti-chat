@@ -2,7 +2,7 @@
 //! services like the database, onion service,...
 
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
-use crate::{db, error};
+use crate::{db::{self, DbModel}, error};
 use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
 use futures::{AsyncReadExt, Stream, StreamExt};
 use tokio::sync::Mutex as TokioMutex;
@@ -17,6 +17,9 @@ type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>;
 pub struct Client {
     /// Arti Tor Client.
     pub tor_client: ArtiTorClient,
+    
+    /// Database connection.
+    pub db_conn: DatabaseConnection,
 
     /// Running hidden onion service.
     onion_service: std::sync::Arc<tor_hsservice::RunningOnionService>,
@@ -24,9 +27,6 @@ pub struct Client {
     /// Request stream of onion service to handle incoming requests.
     /// We have to store it seperately because we can't derive it after `launch_onion_service`.
     request_stream: TokioMutex<std::pin::Pin<OnionServiceRequestStream>>,
-
-    /// Database connection.
-    db_conn: DatabaseConnection,
 
     /// Private key of user to sign chat messages.
     private_key: SigningKey,
@@ -61,17 +61,17 @@ impl Client {
         }.insert(db_conn.clone()).await;
 
         // Retrieve user again to get actual stored keypair.
-        let user: db::UserDb = db::UserDb::retrieve(db_conn.clone(), &onion_id).await?;
+        let user: db::UserDb = db::UserDb::retrieve(&onion_id, db_conn.clone()).await?;
         let (private_key, public_key) = Self::get_validated_keypair(&user.private_key, &user.public_key)?;
 
         tracing::info!("ArtiChat client launched.");
         Ok(Self {
             tor_client,
+            db_conn,
             onion_service,
             request_stream,
             private_key,
             public_key,
-            db_conn,
         })
     }
 

@@ -1,6 +1,6 @@
 //! Logic to communicate between the daemon and the desktop app using Inter-process communication.
 
-use crate::{error::IpcError, rpc};
+use crate::{client, db::{self, DbModel}, error::IpcError, rpc::{self, SendRpcReply}};
 use futures::io::WriteHalf;
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -23,8 +23,8 @@ impl SocketPaths {
     pub const BROADCAST: &str = "/tmp/arti-chat.broadcast.sock";
 }
 
-// Type of message to UI.
-enum MessageToUI {
+/// Type of message to UI.
+pub enum MessageToUI {
     // Broadcast.
     Broadcast(String),
     // RPC command.
@@ -35,6 +35,7 @@ enum MessageToUI {
 pub async fn run_ipc_server(
     mut message_rx: tokio::sync::mpsc::UnboundedReceiver<String>,   // Receives incoming chat messages
     // from client.
+    client: std::sync::Arc<client::Client>,
 ) -> Result<(), IpcError> {
 
     // Bind broadcast socket.
@@ -116,7 +117,7 @@ pub async fn run_ipc_server(
                 tokio::spawn(ui_write_loop(rx_writer, write_half));
 
                 // Handle incoming RPC request.
-                tokio::spawn(handle_rpc_call(read_half, tx_writer, tx_broadcast));
+                tokio::spawn(handle_rpc_call(read_half, tx_writer, tx_broadcast, client.clone()));
             }
         }
     }
@@ -145,6 +146,7 @@ async fn handle_rpc_call(
     read_half: OwnedReadHalf,                               // Read incoming RPC call.
     tx_writer: UnboundedSender<MessageToUI>,                // Reply to current RPC call.
     tx_broadcast: Option<UnboundedSender<MessageToUI>>,     // Write to UI.
+    client: std::sync::Arc<client::Client>,
 ) {
 
     // Convert incoming RPC call to lines.
@@ -156,21 +158,13 @@ async fn handle_rpc_call(
         }
 
         tracing::debug!("Imcoming RPC command from UI: {}", line);
-
-        let cmd: rpc::RpcCommand = match serde_json::from_str(&line) {
-            Ok(c) => c,
-            Err(e) => {
-                let _ = tx_writer.send(MessageToUI::Rpc(
-                    format!(r#"{{"error":"Bad JSON: {}"}}"#, e)
-                ));
-                continue;
+        match serde_json::from_str::<rpc::RpcCommand>(&line) {
+            Ok(cmd) => {
+                if let Err(e) = cmd.route(&tx_writer, &client).await {
+                    rpc::reply_rpc_error(&tx_writer, &e);
+                }
             }
-        };
-
-        match cmd {
-            rpc::RpcCommand::LoadContacts => {
-                let _ = tx_writer.send(MessageToUI::Rpc("xxx".to_string()));
-            }
+            Err(e) => rpc::reply_rpc_error(&tx_writer, &e.into()),
         }
     }
 }

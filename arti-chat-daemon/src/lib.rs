@@ -68,6 +68,7 @@ pub async fn run() -> Result<(), error::DaemonError> {
 
     // Create Tor client + launch hidden service.
     let client = client::Client::launch(db_conn).await?;
+    let client = std::sync::Arc::new(client);
     let onion_address = client.get_identity_unredacted()?;
     tracing::info!("Onion address: {}", onion_address);
 
@@ -76,7 +77,7 @@ pub async fn run() -> Result<(), error::DaemonError> {
     let (message_tx, message_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
 
     // Start IPC server.
-    tokio::spawn(ipc::run_ipc_server(message_rx));
+    tokio::spawn(ipc::run_ipc_server(message_rx, client.clone()));
 
     // Service hidden service.
     client.serve(message_tx).await?;

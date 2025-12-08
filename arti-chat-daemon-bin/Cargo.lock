@@ -113,6 +113,7 @@ name = "arti-chat-daemon"
 version = "0.1.0"
 dependencies = [
  "arti-client",
+ "async-trait",
  "directories",
  "ed25519-dalek",
  "futures",
