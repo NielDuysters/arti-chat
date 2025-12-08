@@ -76,14 +76,15 @@ impl Client {
     }
 
     /// Main entrypoint/loop to accept requests from our hidden onion service.
-    pub async fn serve(&self) -> Result<(), error::ClientError> {
+    pub async fn serve(&self, message_tx: tokio::sync::mpsc::UnboundedSender<String>) -> Result<(), error::ClientError> {
         let mut request_stream = self.request_stream.lock().await;
         let requests = tor_hsservice::handle_rend_requests(&mut *request_stream);
         tokio::pin!(requests);
 
         while let Some(request) = requests.next().await {
+            let message_tx = message_tx.clone();
             tokio::spawn(async move {
-                let _ = Self::handle_request(request).await;
+                let _ = Self::handle_request(request, message_tx).await;
             });
         }
 
@@ -170,7 +171,11 @@ impl Client {
     }
 
     // Handle request from client to open new stream to our onion service.
-    async fn handle_request(request: tor_hsservice::StreamRequest) -> Result<(), error::ClientError> {
+    async fn handle_request(
+        request: tor_hsservice::StreamRequest,
+        message_tx: tokio::sync::mpsc::UnboundedSender<String>,  // Used to send incoming messages
+        // to IPC server.
+    ) -> Result<(), error::ClientError> {
         match request.request() {
             IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
                 // Incoming request is a Begin message.
@@ -198,8 +203,9 @@ impl Client {
                 }
 
                 let body = String::from_utf8_lossy(&read_buffer);
-
                 tracing::debug!("Received request: {}", body);
+
+                message_tx.send(body.to_string());
 
                 Ok(())
             },

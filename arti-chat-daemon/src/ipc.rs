@@ -25,7 +25,10 @@ enum MessageToUI {
 }
 
 /// Run our IPC server.
-pub async fn run_ipc_server() -> Result<(), IpcError> {
+pub async fn run_ipc_server(
+    mut message_rx: tokio::sync::mpsc::UnboundedReceiver<String>,   // Receives incoming chat messages
+    // from client.
+) -> Result<(), IpcError> {
 
     // Bind broadcast socket.
     // Used for fire and forget-messages for when we do not expect a reply from the UI.
@@ -48,28 +51,35 @@ pub async fn run_ipc_server() -> Result<(), IpcError> {
 
     loop {
         tokio::select! {
+            // Incoming chat message.
+            Some(message) = message_rx.recv() => {
+                // Send to all broadcast listeners and remove dead listeners.
+                broadcast_writers.lock().await.retain(|tx| {
+                    tx.send(MessageToUI::Broadcast(message.to_string() + "\n")).is_ok()
+                });
+            }
 
-        // New broadcast subscriber.
-        Ok((stream, _)) = broadcast_listener.accept() => {
-            tracing::debug!("UI subscribed to IPC broadcast channel.");
+            // New broadcast subscriber.
+            Ok((stream, _)) = broadcast_listener.accept() => {
+                tracing::debug!("UI subscribed to IPC broadcast channel.");
 
-            // Write_half is pipe back to the UI.
-            let (_, write_half) = stream.into_split();
+                // Write_half is pipe back to the UI.
+                let (_, write_half) = stream.into_split();
 
-            // - tx_writer: Allows daemon to transmit message to UI.
-            // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
-            //              write to `write_half`.
-            let (tx_writer, rx_writer) = mpsc::unbounded_channel();
+                // - tx_writer: Allows daemon to transmit message to UI.
+                // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
+                //              write to `write_half`.
+                let (tx_writer, rx_writer) = mpsc::unbounded_channel();
 
-            // Push tx_writer writer to broadcast_writers so this UI also receives messages.
-            broadcast_writers.lock().await.push(tx_writer.clone());
+                // Push tx_writer writer to broadcast_writers so this UI also receives messages.
+                broadcast_writers.lock().await.push(tx_writer.clone());
 
-            // Start ui_write_loop with write_half and rx_writer.
-            // When daemon uses tx_writer (via broadcast_writers) to write
-            // a message to the UI, rx_writer will read it and forward it
-            // to write_half which is the pipe back to the UI.
-            tokio::spawn(ui_write_loop(rx_writer, write_half));
-        }
+                // Start ui_write_loop with write_half and rx_writer.
+                // When daemon uses tx_writer (via broadcast_writers) to write
+                // a message to the UI, rx_writer will read it and forward it
+                // to write_half which is the pipe back to the UI.
+                tokio::spawn(ui_write_loop(rx_writer, write_half));
+            }
 
             // New RPC request.
             Ok((stream, _)) = rpc_listener.accept() => {

@@ -71,8 +71,15 @@ pub async fn run() -> Result<(), error::DaemonError> {
     let onion_address = client.get_identity_unredacted()?;
     tracing::info!("Onion address: {}", onion_address);
 
+    // Channel to receive incoming messages in the client, and sent them to our
+    // IPC server to broadcast them to the UI.
+    let (message_tx, message_rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+
+    // Start IPC server.
+    tokio::spawn(ipc::run_ipc_server(message_rx));
+
     // Service hidden service.
-    client.serve().await?;
+    client.serve(message_tx).await?;
 
 
     Ok(())
