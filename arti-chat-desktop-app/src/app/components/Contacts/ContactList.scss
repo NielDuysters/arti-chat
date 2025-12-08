@@ -1,0 +1,39 @@
+.contacts {
+  width: 350px;
+  height: 100vh;
+  background: var(--bg-dark);
+  overflow-y: auto;
+  border-top-right-radius: 10px;
+  display: flex;
+  flex-direction: column;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 75px;
+    padding: 0 25px;
+    background: var(--bg-dark);
+    position: sticky;
+    top: 0;
+  }
+
+  &__title {
+    font-size: 1.25em;
+    font-weight: bold;
+  }
+
+  &__new-btn {
+    width: 25px;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+  }
+}

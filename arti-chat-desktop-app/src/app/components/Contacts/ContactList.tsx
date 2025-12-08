@@ -7,13 +7,13 @@ export default function ContactList() {
   const { contacts } = useContacts();
 
   return (
-    <div id="contact-list-wrapper">
-      <div id="chats-top">
-        <span id="chats-title">Chats</span>
-        <img id="new-chat-button" src="/src/assets/edit.png" />
+    <div className="contacts">
+      <div className="contacts__header">
+        <span className="contacts__title">Chats</span>
+        <img className="contacts__new-btn" src="/src/assets/edit.png" />
       </div>
 
-      <div id="contact-list">
+      <div className="contacts__list">
         {contacts.map((c) => (
           <ContactItem key={c.onion} contact={c} />
         ))}

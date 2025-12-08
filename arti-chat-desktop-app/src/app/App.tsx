@@ -2,8 +2,8 @@ import { useState } from "react";
 import reactLogo from "./../assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 
-import LeftNav from "./components/LeftNav/LeftNav";
-import ContactList from "./components/ContactList/ContactList";
+import Nav from "./components/Nav/Nav";
+import ContactList from "./components/Contacts/ContactList";
 
 import "./../styles/globals.scss";
 import "./../App.scss";
@@ -11,7 +11,7 @@ import "./../App.scss";
 function App() {
     return (
         <main className="container">
-          <LeftNav />
+          <Nav />
           <ContactList />
         </main>
     );
