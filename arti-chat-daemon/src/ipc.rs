@@ -13,8 +13,15 @@ use tokio::sync::Mutex as TokioMutex;
 
 type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
 
-const RPC_SOCK: &str = "/tmp/arti-chat.rpc.sock";
-const BROADCAST_SOCK: &str = "/tmp/arti-chat.broadcast.sock";
+/// Possible paths for UnixSockets.
+pub struct SocketPaths;
+impl SocketPaths {
+    /// Socket for RPC (send + reply).
+    pub const RPC: &str = "/tmp/arti-chat.rpc.sock";
+    
+    /// Socket for broadcasting (fire and forget).
+    pub const BROADCAST: &str = "/tmp/arti-chat.broadcast.sock";
+}
 
 // Type of message to UI.
 enum MessageToUI {
@@ -33,16 +40,16 @@ pub async fn run_ipc_server(
     // Bind broadcast socket.
     // Used for fire and forget-messages for when we do not expect a reply from the UI.
     // E.g: When the daemon wants to push an incoming message to the UI.
-    let _ = std::fs::remove_file(BROADCAST_SOCK);
-    let broadcast_listener = UnixListener::bind(BROADCAST_SOCK)?;
-    tracing::info!("Broadcast IPC listening at: {}", BROADCAST_SOCK);
+    let _ = std::fs::remove_file(SocketPaths::BROADCAST);
+    let broadcast_listener = UnixListener::bind(SocketPaths::BROADCAST)?;
+    tracing::info!("Broadcast IPC listening at: {}", SocketPaths::BROADCAST);
 
     // Bind RPC socket.
     // Used for RPC commands for which the UI expects a reply.
     // E.g: UI requests info of contact, we receive the RPC command and send a reply.
-    let _ = std::fs::remove_file(RPC_SOCK);
-    let rpc_listener = UnixListener::bind(RPC_SOCK)?;
-    tracing::info!("RPC IPC listening at: {}", RPC_SOCK);
+    let _ = std::fs::remove_file(SocketPaths::RPC);
+    let rpc_listener = UnixListener::bind(SocketPaths::RPC)?;
+    tracing::info!("RPC IPC listening at: {}", SocketPaths::RPC);
 
     // List of outgoing channels to subscribed UI.
     let broadcast_writers = std::sync::Arc::new(TokioMutex::new(
