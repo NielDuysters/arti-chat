@@ -2,8 +2,9 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub mod commands;
 pub mod error;
-pub mod model;
 pub mod ipc;
+pub mod model;
+pub mod rpc;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

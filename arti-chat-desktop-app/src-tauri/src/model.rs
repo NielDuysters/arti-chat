@@ -7,8 +7,3 @@ pub struct Contact {
     pub unread_messages: i32,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ContactResponse {
-    pub contacts: Vec<Contact>,
-}
-

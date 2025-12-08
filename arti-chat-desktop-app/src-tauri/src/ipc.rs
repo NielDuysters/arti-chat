@@ -5,6 +5,7 @@ use crate::error;
 pub struct SocketPaths;
 impl SocketPaths {
     pub const BROADCAST: &str = "/tmp/arti-chat.broadcast.sock";
+    pub const RPC: &str = "/tmp/arti-chat.rpc.sock";
 }
 
 pub async fn get_socket_stream(
