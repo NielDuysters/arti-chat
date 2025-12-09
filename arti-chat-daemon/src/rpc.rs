@@ -25,7 +25,7 @@ pub struct LoadContactsResponse {
 }
 impl SendRpcReply for LoadContactsResponse {}
 
-// LoadChat response.
+/// LoadChat response.
 #[derive(serde::Serialize)]
 pub struct LoadChatResponse {
     /// List of messages in chat.
@@ -113,6 +113,17 @@ impl RpcCommand {
             sent_status: false,
             verified_status: false,
         }.insert(client.db_conn.clone()).await?;
+
+        // By sending a incoming message to the UI over broadcast, the UI will reload the chat.
+        #[derive(serde::Serialize)]
+        struct SendIncomingMessage {
+            pub onion_id: String,
+        }
+        let incoming_message = SendIncomingMessage { onion_id: to.to_string() };
+        let incoming_message = serde_json::to_string(&incoming_message)? + "\n";
+        if let Some(tx_broadcast) = tx {
+            let _ = tx_broadcast.send(MessageToUI::Broadcast(incoming_message));
+        }
 
         Ok(())
     }
