@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export interface Message {
     body: string;
@@ -50,6 +51,28 @@ export function useChat(activeContact) {
 
         await loadChat();
     }
+
+    // Listen for new messages.
+    useEffect(() => {
+        if (!activeContact) {
+            return;
+        }
+
+        const promise = listen("incoming-message", async (event) => {
+            const data = JSON.parse(event.payload);
+            console.log(data)
+
+            if (data.onion_id !== activeContact.onion_id) {
+                return;
+            }
+
+            await loadChat();
+        });
+
+        return () => {
+            promise.then((p) => p());
+        };
+    }, [activeContact, loadChat])
 
     return {
         messages,

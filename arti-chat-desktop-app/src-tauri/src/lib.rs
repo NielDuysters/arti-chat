@@ -1,3 +1,4 @@
+use tauri::Emitter;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 pub mod commands;
@@ -10,7 +11,9 @@ pub mod rpc;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .setup(|_app| {
+        .setup(|app| {
+            let app_handle = app.handle().clone();
+
             // Separate async task to receive messages from broadcast.
             tauri::async_runtime::spawn(async move {
                 let broadcast_stream = ipc::get_socket_stream(
@@ -24,6 +27,7 @@ pub fn run() {
                 let mut lines = BufReader::new(broadcast_stream).lines();
                 while let Ok(Some(line)) = lines.next_line().await {
                     tracing::info!("Received message: {}", line);
+                    let _ = app_handle.emit("incoming-message", line);
                 }
             });
 
