@@ -74,19 +74,19 @@ pub async fn run_ipc_server(
                 // Write_half is pipe back to the UI.
                 let (_, write_half) = stream.into_split();
 
-                // - tx_writer: Allows daemon to transmit message to UI.
-                // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
+                // - tx_broadcast: Allows daemon to transmit message to UI.
+                // - rx_broadcast: Receives incoming messages from daemon and through `ui_writer_loop` will
                 //              write to `write_half`.
-                let (tx_writer, rx_writer) = mpsc::unbounded_channel();
+                let (tx_broadcast, rx_broadcast) = mpsc::unbounded_channel();
 
-                // Push tx_writer writer to broadcast_writers so this UI also receives messages.
-                broadcast_writers.lock().await.push(tx_writer.clone());
+                // Push tx_broadcast writer to broadcast_writers so this UI also receives messages.
+                broadcast_writers.lock().await.push(tx_broadcast.clone());
 
-                // Start ui_write_loop with write_half and rx_writer.
-                // When daemon uses tx_writer (via broadcast_writers) to write
+                // Start ui_write_loop with write_half and rx_broadcast.
+                // When daemon uses tx_broadcast (via broadcast_writers) to write
                 // a message to the UI, rx_writer will read it and forward it
                 // to write_half which is the pipe back to the UI.
-                tokio::spawn(ui_write_loop(rx_writer, write_half));
+                tokio::spawn(ui_write_loop(rx_broadcast, write_half));
             }
 
             // New RPC request.
@@ -98,10 +98,10 @@ pub async fn run_ipc_server(
                 // arguments.
                 let (read_half, write_half) = stream.into_split();
 
-                // - tx_writer: Allows daemon to transmit message to UI.
-                // - rx_writer: Receives incoming messages from daemon and through `ui_writer_loop` will
+                // - tx_rpc: Allows daemon to transmit message to UI.
+                // - rx_rpc: Receives incoming messages from daemon and through `ui_writer_loop` will
                 //              write to `write_half`.
-                let (tx_writer, rx_writer) = mpsc::unbounded_channel();
+                let (tx_rpc, rx_rpc) = mpsc::unbounded_channel();
 
                 // Get latest broadcast_writer to send broadcast messages to UI.
                 let tx_broadcast = broadcast_writers
@@ -110,14 +110,14 @@ pub async fn run_ipc_server(
                     .last()
                     .cloned();
 
-                // Start ui_write_loop with write_half and rx_writer.
-                // When daemon uses tx_writer (via broadcast_writers) to write
-                // a message to the UI, rx_writer will read it and forward it
+                // Start ui_write_loop with write_half and rx_rpc.
+                // When daemon uses tx_rpc to write
+                // a message to the UI, rx_rpc will read it and forward it
                 // to write_half which is the pipe back to the UI.
-                tokio::spawn(ui_write_loop(rx_writer, write_half));
+                tokio::spawn(ui_write_loop(rx_rpc, write_half));
 
                 // Handle incoming RPC request.
-                tokio::spawn(handle_rpc_call(read_half, tx_writer, tx_broadcast, client.clone()));
+                tokio::spawn(handle_rpc_call(read_half, tx_rpc, tx_broadcast, client.clone()));
             }
         }
     }
@@ -144,7 +144,7 @@ async fn ui_write_loop(
 // Handle a RPC call coming from the UI.
 async fn handle_rpc_call(
     read_half: OwnedReadHalf,                               // Read incoming RPC call.
-    tx_writer: UnboundedSender<MessageToUI>,                // Reply to current RPC call.
+    tx_rpc: UnboundedSender<MessageToUI>,                // Reply to current RPC call.
     tx_broadcast: Option<UnboundedSender<MessageToUI>>,     // Write to UI.
     client: std::sync::Arc<client::Client>,
 ) {
@@ -160,11 +160,11 @@ async fn handle_rpc_call(
         tracing::debug!("Imcoming RPC command from UI: {}", line);
         match serde_json::from_str::<rpc::RpcCommand>(&line) {
             Ok(cmd) => {
-                if let Err(e) = cmd.route(&tx_writer, &client).await {
-                    rpc::reply_rpc_error(&tx_writer, &e);
+                if let Err(e) = cmd.route(&tx_rpc, &client).await {
+                    rpc::reply_rpc_error(&tx_rpc, &e);
                 }
             }
-            Err(e) => rpc::reply_rpc_error(&tx_writer, &e.into()),
+            Err(e) => rpc::reply_rpc_error(&tx_rpc, &e.into()),
         }
     }
 }
