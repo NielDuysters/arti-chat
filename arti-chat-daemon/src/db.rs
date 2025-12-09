@@ -163,6 +163,7 @@ impl DbModel for MessageDb {
             ("body", &self.body),
             ("timestamp", &self.timestamp),
             ("is_incoming", &self.is_incoming),
+            ("sent_status", &self.sent_status),
         ]
     }
 

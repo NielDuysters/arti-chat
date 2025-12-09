@@ -144,7 +144,7 @@ async fn ui_write_loop(
 // Handle a RPC call coming from the UI.
 async fn handle_rpc_call(
     read_half: OwnedReadHalf,                               // Read incoming RPC call.
-    tx_rpc: UnboundedSender<MessageToUI>,                // Reply to current RPC call.
+    tx_rpc: UnboundedSender<MessageToUI>,                   // Reply to current RPC call.
     tx_broadcast: Option<UnboundedSender<MessageToUI>>,     // Write to UI.
     client: std::sync::Arc<client::Client>,
 ) {
@@ -160,7 +160,7 @@ async fn handle_rpc_call(
         tracing::debug!("Imcoming RPC command from UI: {}", line);
         match serde_json::from_str::<rpc::RpcCommand>(&line) {
             Ok(cmd) => {
-                if let Err(e) = cmd.route(&tx_rpc, &client).await {
+                if let Err(e) = cmd.route(&tx_rpc, &tx_broadcast, &client).await {
                     rpc::reply_rpc_error(&tx_rpc, &e);
                 }
             }

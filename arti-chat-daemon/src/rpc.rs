@@ -12,6 +12,9 @@ pub enum RpcCommand {
 
     /// Load chat.
     LoadChat { onion_id: String },
+
+    /// Send message.
+    SendMessage { to: String, text: String },
 }
 
 /// LoadContacts response.
@@ -46,14 +49,17 @@ impl RpcCommand {
     /// Route incoming RPC call to correct handler.
     pub async fn route(
         &self,
-        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        tx_rpc: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        tx_broadcast: &Option<tokio::sync::mpsc::UnboundedSender<MessageToUI>>,
         client: &client::Client,
     ) -> Result<(), RpcError> {
         match self {
             RpcCommand::LoadContacts =>
-                self.handle_load_contacts(&tx, client.db_conn.clone()).await,
+                self.handle_load_contacts(&tx_rpc, client.db_conn.clone()).await,
             RpcCommand::LoadChat { onion_id } =>
-                self.handle_load_chat(onion_id, &tx, client.db_conn.clone()).await,
+                self.handle_load_chat(onion_id, &tx_rpc, client.db_conn.clone()).await,
+            RpcCommand::SendMessage { to, text } => 
+                self.handle_send_message(to, text, &tx_broadcast, client).await,
         }
     }
 
@@ -90,6 +96,25 @@ impl RpcCommand {
                 .collect::<Result<Vec<_>, _>>()?
 
         }.send_rpc_reply(tx)
+    }
+
+    async fn handle_send_message(
+        &self,
+        to: &str,
+        text: &str,
+        tx: &Option<tokio::sync::mpsc::UnboundedSender<MessageToUI>>,
+        client: &client::Client,
+    ) -> Result<(), RpcError> {
+        db::MessageDb {
+            contact_onion_id: to.to_string(),
+            body: text.to_string(),
+            timestamp: chrono::Utc::now().timestamp() as i32,
+            is_incoming: false,
+            sent_status: false,
+            verified_status: false,
+        }.insert(client.db_conn.clone()).await?;
+
+        Ok(())
     }
 }
 
