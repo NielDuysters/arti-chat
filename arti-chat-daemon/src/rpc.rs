@@ -9,6 +9,9 @@ use crate::{client, db::{self, DbModel}, error::RpcError, ipc::MessageToUI};
 pub enum RpcCommand {
     /// Load contacts.
     LoadContacts,
+
+    /// Load chat.
+    LoadChat { onion_id: String },
 }
 
 /// LoadContacts response.
@@ -17,8 +20,15 @@ pub struct LoadContactsResponse {
     /// List of returned contacts.
     pub contacts: Vec<serde_json::Value>,
 }
-
 impl SendRpcReply for LoadContactsResponse {}
+
+// LoadChat response.
+#[derive(serde::Serialize)]
+pub struct LoadChatResponse {
+    /// List of messages in chat.
+    pub messages: Vec<serde_json::Value>,
+}
+impl SendRpcReply for LoadChatResponse {}
 
 /// Trait to define default behavior to send RPC reply.
 #[async_trait]
@@ -42,8 +52,12 @@ impl RpcCommand {
         match self {
             RpcCommand::LoadContacts =>
                 self.handle_load_contacts(&tx, client.db_conn.clone()).await,
+            RpcCommand::LoadChat { onion_id } =>
+                self.handle_load_chat(onion_id, &tx, client.db_conn.clone()).await,
         }
     }
+
+    // --- Local handlers ---
 
     async fn handle_load_contacts(
         &self,
@@ -54,6 +68,23 @@ impl RpcCommand {
 
         LoadContactsResponse {
             contacts: contacts
+                .into_iter()
+                .map(serde_json::to_value)
+                .collect::<Result<Vec<_>, _>>()?
+
+        }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_load_chat(
+        &self,
+        onion_id: &str,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        db_conn: db::DatabaseConnection,
+    ) -> Result<(), RpcError> {
+        let messages = db::MessageDb::retrieve_messages(onion_id, db_conn.clone()).await?;
+
+        LoadChatResponse {
+            messages: messages
                 .into_iter()
                 .map(serde_json::to_value)
                 .collect::<Result<Vec<_>, _>>()?

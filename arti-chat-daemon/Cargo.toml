@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 arti-client = { version =  "0.37.0", features = ["onion-service-client", "onion-service-service", "experimental-api"] }
 async-trait = "0.1.89"
+chrono = "0.4.42"
 directories = "6.0.0"
 ed25519-dalek = { version = "2.2.0", features = ["serde", "rand_core"] }
 futures = "0.3.31"

@@ -32,14 +32,12 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
 
         CREATE TABLE IF NOT EXISTS message (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            contact_id INTEGER NOT NULL,
             sender_onion_id TEXT NOT NULL,
             body TEXT NOT NULL,
             timestamp INTEGER NOT NULL,
             is_incoming INTEGER NOT NULL,
             sent_status INTEGER NOT NULL DEFAULT 0,
-            verified_status INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY(contact_id) REFERENCES contact(id)
+            verified_status INTEGER NOT NULL DEFAULT 0
         );
         "#,
     )?;
@@ -133,6 +131,82 @@ impl DbModel for ContactDb {
     }
 }
 
+// --- Message ---
+
+/// Represents row in message table.
+#[derive(serde::Serialize)]
+pub struct MessageDb {
+    /// Column sender_onion_id.
+    pub sender_onion_id: String,
+
+    /// Column body.
+    pub body: String,
+
+    /// Column timestamp.
+    pub timestamp: i32,
+
+    /// Column is_incoming.
+    pub is_incoming: bool,
+    
+    /// Column sent_status.
+    pub sent_status: bool,
+
+    /// Column verified_status.
+    pub verified_status: bool,
+}
+
+impl DbModel for MessageDb {
+    fn table() -> &'static str { "message" }
+
+    fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
+        vec![
+            ("sender_onion_id", &self.sender_onion_id),
+            ("body", &self.body),
+            ("timestamp", &self.timestamp),
+            ("is_incoming", &self.is_incoming),
+        ]
+    }
+
+    fn from_row(row: &Row) -> rusqlite::Result<Self> {
+        Ok(Self {
+            sender_onion_id: row.get("sender_onion_id")?,
+            body: row.get("body")?,
+            timestamp: row.get("timestamp")?,
+            is_incoming: row.get("is_incoming")?,
+            sent_status: row.get("sent_status")?,
+            verified_status: row.get("verified_status")?,
+        })
+    }
+}
+
+impl MessageDb {
+    /// Retrieve messages for chat.
+    pub async fn retrieve_messages(
+        onion_id: &str,
+        conn: DatabaseConnection
+    ) -> Result<Vec<Self>, error::DatabaseError>  {
+        let conn = conn.lock().await;
+
+        let mut stmt = conn.prepare(
+            "SELECT * FROM MESSAGE
+             WHERE
+                sender_onion_id = ?
+             ORDER BY
+                timestamp ASC"
+        )?;
+        
+        let rows = stmt.query_map(params![onion_id], |row| {
+            Ok(Self::from_row(row)?)
+        })?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            results.push(row?);
+        }
+
+        Ok(results)
+    }
+}
 
 /// Public trait implementing default methods (insert, retrieve, update) for Db types.
 #[async_trait]
