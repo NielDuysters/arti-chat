@@ -2,6 +2,9 @@ import { useEffect, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useChat } from "../../hooks/useChat";
+import Message from "./Message";
+
+import "./ChatWindow.scss";
 
 export default function ChatWindow({ activeContact }) {
     const { messages } = useChat(activeContact);
@@ -11,16 +14,19 @@ export default function ChatWindow({ activeContact }) {
     }
 
     return (
-        <div className="screen screen--chat">
-            <span>{activeContact.nickname}</span>
+        <div className="screen screen--chat chat">
+            <div className="chat__top">
+                <div className="chat__contact-info">
+                    <div className="chat__contact-info__image"></div>
+                    <span className="chat__contact-info__nickname">{activeContact.nickname}</span>
+                </div>
+            </div>
 
-            <div className="screen--chat__messages">
+            <div className="chat__messages">
                 {messages.length === 0 && <p>No messages yet.</p>}
 
                 {messages.map((msg) => (
-                    <div key={msg.timestamp}>
-                        {msg.body}
-                    </div>
+                    <Message key={msg.timestamp} message={msg} />
                 ))}
             </div>
         </div>

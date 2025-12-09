@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 export interface Message {
     body: string;
     timestamp: number;
+    is_incoming: boolean;
 }
 
 export function useChat(activeContact) {

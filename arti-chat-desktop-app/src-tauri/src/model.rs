@@ -11,22 +11,11 @@ pub struct Contact {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Message {
-    /// Column sender_onion_id.
-    pub sender_onion_id: String,
-
-    /// Column body.
+    pub contact_onion_id: String,
     pub body: String,
-
-    /// Column timestamp.
     pub timestamp: i32,
-
-    /// Column is_incoming.
     pub is_incoming: bool,
-    
-    /// Column sent_status.
     pub sent_status: bool,
-
-    /// Column verified_status.
     pub verified_status: bool,
 }
 

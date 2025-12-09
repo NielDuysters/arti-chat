@@ -13,7 +13,7 @@ export default function ContactList({contacts, setActiveContact, setView}) {
       <div className="contacts__list">
         {contacts.map((c) => (
             <ContactItem
-                key={c.onion}
+                key={c.onion_id}
                 contact={c}
                 onClick={() => {
                     setActiveContact(c);
