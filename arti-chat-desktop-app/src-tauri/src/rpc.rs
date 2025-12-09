@@ -31,6 +31,15 @@ pub struct LoadChatResponse {
 impl SendRpcCommand for LoadChat {}
 impl ReceiveRpcReply<LoadChatResponse> for LoadChat {} 
 
+/// --- Send message ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SendMessage {
+    pub to: String,
+    pub text: String,
+}
+
+impl SendRpcCommand for SendMessage {}
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {

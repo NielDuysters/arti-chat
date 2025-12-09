@@ -32,6 +32,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::load_contacts,
             commands::load_chat,
+            commands::send_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -8,25 +8,52 @@ export interface Message {
 }
 
 export function useChat(activeContact) {
-  const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
 
+    // Load chat.
+    const loadChat = useCallback(async () => {
+        if (!activeContact) {
+            return;
+        }
 
-  const loadChat = useCallback(async () => {
-    if (!activeContact) return;
+        const msgs = await invoke<Message[]>("load_chat", {
+            onionId: activeContact.onion_id,
+        });
 
-    const msgs = await invoke<Message[]>("load_chat", {
-      onionId: activeContact.onion_id,
-    });
+        setMessages(msgs);
+    }, [activeContact]);
 
-    setMessages(msgs);
-  }, [activeContact]);
-  
-  useEffect(() => {
-    loadChat();
-  }, []);
+    useEffect(() => {
+        loadChat();
+    }, []);
 
-  return {
-    messages,
-  };
+    // Send message.
+    const sendMessage = async (text: string) => {
+        if (!activeContact) {
+            return;
+        }
+
+        // Push to chat to avoid slow UI.
+        setMessages((prev) => [
+            ...prev,
+            {
+                body: text,
+                timestamp: Date.now(),
+                is_incoming: false,
+            }
+        ])
+
+        await invoke("send_message", {
+            to: activeContact.onion_id,
+            text: text,
+        })
+
+        await loadChat();
+    }
+
+    return {
+        messages,
+        sendMessage,
+    };
 }
 

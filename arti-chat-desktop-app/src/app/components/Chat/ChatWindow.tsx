@@ -1,13 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+
 import { useChat } from "../../hooks/useChat";
+
 import Message from "./Message";
+import ChatInput from "./ChatInput";
 
 import "./ChatWindow.scss";
 
 export default function ChatWindow({ activeContact }) {
-    const { messages } = useChat(activeContact);
+    const { messages, sendMessage } = useChat(activeContact);
 
     if (!activeContact) {
         return null;
@@ -29,6 +32,8 @@ export default function ChatWindow({ activeContact }) {
                     <Message key={msg.timestamp} message={msg} />
                 ))}
             </div>
+
+            <ChatInput sendMessage={sendMessage} />
         </div>
     );
 }
