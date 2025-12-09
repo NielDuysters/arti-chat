@@ -14,16 +14,14 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
     conn.execute_batch(
         r#"
         CREATE TABLE IF NOT EXISTS user (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            onion_id TEXT NOT NULL UNIQUE,
+            onion_id TEXT PRIMARY KEY,
             nickname TEXT NOT NULL,
             public_key TEXT NOT NULL,
             private_key TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS contact (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            onion_id TEXT NOT NULL UNIQUE,
+            onion_id TEXT PRIMARY KEY,
             nickname TEXT NOT NULL,
             public_key TEXT NOT NULL,
             last_message_at INTEGER,
@@ -32,12 +30,13 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
 
         CREATE TABLE IF NOT EXISTS message (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sender_onion_id TEXT NOT NULL,
+            contact_onion_id TEXT NOT NULL,
             body TEXT NOT NULL,
             timestamp INTEGER NOT NULL,
             is_incoming INTEGER NOT NULL,
             sent_status INTEGER NOT NULL DEFAULT 0,
-            verified_status INTEGER NOT NULL DEFAULT 0
+            verified_status INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (contact_onion_id) REFERENCES contact(onion_id)
         );
         "#,
     )?;
@@ -136,8 +135,8 @@ impl DbModel for ContactDb {
 /// Represents row in message table.
 #[derive(serde::Serialize)]
 pub struct MessageDb {
-    /// Column sender_onion_id.
-    pub sender_onion_id: String,
+    /// Column contact_onion_id.
+    pub contact_onion_id: String,
 
     /// Column body.
     pub body: String,
@@ -160,7 +159,7 @@ impl DbModel for MessageDb {
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
-            ("sender_onion_id", &self.sender_onion_id),
+            ("contact_onion_id", &self.contact_onion_id),
             ("body", &self.body),
             ("timestamp", &self.timestamp),
             ("is_incoming", &self.is_incoming),
@@ -169,7 +168,7 @@ impl DbModel for MessageDb {
 
     fn from_row(row: &Row) -> rusqlite::Result<Self> {
         Ok(Self {
-            sender_onion_id: row.get("sender_onion_id")?,
+            contact_onion_id: row.get("contact_onion_id")?,
             body: row.get("body")?,
             timestamp: row.get("timestamp")?,
             is_incoming: row.get("is_incoming")?,
@@ -190,7 +189,7 @@ impl MessageDb {
         let mut stmt = conn.prepare(
             "SELECT * FROM MESSAGE
              WHERE
-                sender_onion_id = ?
+                contact_onion_id = ?
              ORDER BY
                 timestamp ASC"
         )?;
