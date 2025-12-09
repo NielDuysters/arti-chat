@@ -5,7 +5,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use crate::ipc;
 use crate::model;
 
-/// --- Load contacts ---.
+/// --- Load contacts ---
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct LoadContacts {}
 
@@ -16,6 +16,20 @@ pub struct LoadContactsResponse {
 
 impl SendRpcCommand for LoadContacts {}
 impl ReceiveRpcReply<LoadContactsResponse> for LoadContacts {} 
+
+/// --- Load chat ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LoadChat {
+    pub onion_id: String,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct LoadChatResponse {
+    pub messages: Vec<model::Message>,
+}
+
+impl SendRpcCommand for LoadChat {}
+impl ReceiveRpcReply<LoadChatResponse> for LoadChat {} 
 
 /// Trait to send types as RPC command.
 #[async_trait]

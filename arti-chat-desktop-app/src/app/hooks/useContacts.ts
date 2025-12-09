@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 export interface Contact {
-  onion: string;
+  onion_id: string;
   nickname: string;
 }
 

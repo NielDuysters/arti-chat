@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "arti-chat-desktop-app",
-        "width": 800,
-        "height": 600
+        "width": 1150,
+        "height": 700
       }
     ],
     "security": {

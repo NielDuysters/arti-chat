@@ -8,3 +8,9 @@ pub async fn load_contacts() -> Result<Vec<model::Contact>, String> {
     Ok(response.contacts)
 }
 
+#[tauri::command]
+pub async fn load_chat(onion_id: String) -> Result<Vec<model::Message>, String> {
+    let response = rpc::LoadChat{ onion_id }.receive().await.expect("Failed to load chat.");
+    Ok(response.messages)
+}
+

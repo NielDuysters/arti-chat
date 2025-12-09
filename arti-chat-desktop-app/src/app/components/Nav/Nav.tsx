@@ -3,7 +3,7 @@ import "./Nav.scss";
 
 export default function Nav() {
   return (
-    <div class="nav">
+    <div className="nav">
       <div className="nav__item" data-screen="me">
         <img src="/src/assets/me.png" alt="ME" />
       </div>

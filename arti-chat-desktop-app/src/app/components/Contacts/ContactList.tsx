@@ -1,11 +1,8 @@
 import React from "react";
-import { useContacts } from "../../hooks/useContacts";
 import ContactItem from "./ContactItem";
 import "./ContactList.scss";
 
-export default function ContactList() {
-  const { contacts } = useContacts();
-
+export default function ContactList({contacts, setActiveContact, setView}) {
   return (
     <div className="contacts">
       <div className="contacts__header">
@@ -15,7 +12,14 @@ export default function ContactList() {
 
       <div className="contacts__list">
         {contacts.map((c) => (
-          <ContactItem key={c.onion} contact={c} />
+            <ContactItem
+                key={c.onion}
+                contact={c}
+                onClick={() => {
+                    setActiveContact(c);
+                    setView('chat');
+                }}
+            />
         ))}
       </div>
     </div>

@@ -1,0 +1,33 @@
+.screen--welcome {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  height: 100%;
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 0rem;
+  }
+
+  h4 {
+    font-size: 1.2rem;
+    font-weight: 400;
+  }
+
+  &__donate-btn {
+    margin-top: 1rem;
+    display: inline-block;
+    padding: 1rem 1.4rem;
+    background: var(--primary-color);
+    color: var(--text-dark);
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+
+  }
+}
