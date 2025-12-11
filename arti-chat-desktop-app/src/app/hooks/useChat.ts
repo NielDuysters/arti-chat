@@ -27,7 +27,7 @@ export function useChat(activeContact) {
 
     useEffect(() => {
         loadChat();
-    }, []);
+    }, [loadChat]);
 
     // Send message.
     const sendMessage = async (text: string) => {

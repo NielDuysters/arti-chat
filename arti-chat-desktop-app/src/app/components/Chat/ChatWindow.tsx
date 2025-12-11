@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -12,9 +12,36 @@ import "./ChatWindow.scss";
 export default function ChatWindow({ activeContact }) {
     const { messages, sendMessage } = useChat(activeContact);
 
+    const chatRef = useRef<HTMLDivElement>(null);
+    const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);
+
     if (!activeContact) {
         return null;
     }
+
+    // Detect if user is scrolling in chat.
+    const handleScroll = () => {
+        const el = chatRef.current;
+        if (!el) {
+            return;
+        }
+
+        const userIsAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 20;
+        setAutoScrollToBottom(userIsAtBottom);
+    };
+
+    // Automatically scroll to bottom at incoming message if user is
+    // not scrolling older chats.
+    useEffect(() => {
+        const el = chatRef.current;
+        if (!el) {
+            return;
+        }
+
+        if (autoScrollToBottom) {
+            el.scrollTop = el.scrollHeight;
+        }
+    }, [messages, autoScrollToBottom]);
 
     return (
         <div className="screen screen--chat chat">
@@ -25,7 +52,11 @@ export default function ChatWindow({ activeContact }) {
                 </div>
             </div>
 
-            <div className="chat__messages">
+            <div
+                className="chat__messages"
+                ref={chatRef}
+                onScroll={handleScroll}
+            >
                 {messages.length === 0 && <p>No messages yet.</p>}
 
                 {messages.map((msg) => (
