@@ -6,6 +6,7 @@ export interface Message {
     body: string;
     timestamp: number;
     is_incoming: boolean;
+    sent_status: boolean;
 }
 
 export function useChat(activeContact) {
@@ -41,6 +42,8 @@ export function useChat(activeContact) {
                 body: text,
                 timestamp: Date.now(),
                 is_incoming: false,
+                sent_status: false,
+                optimistic: true,
             }
         ])
 
@@ -60,8 +63,6 @@ export function useChat(activeContact) {
 
         const promise = listen("incoming-message", async (event) => {
             const data = JSON.parse(event.payload);
-            console.log(data)
-
             if (data.onion_id !== activeContact.onion_id) {
                 return;
             }

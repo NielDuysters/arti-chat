@@ -8,6 +8,10 @@
   clear: both;
   position: relative;
 
+  &--optimistic {
+    opacity: 0.7;
+  }
+
   &--incoming {
     background: var(--gray);
 
@@ -42,6 +46,10 @@
 
   &__timestamp {
     font-size: 0.8rem;
+  }
+
+  &__sent-status {
+    width: 14px;
   }
 }
 

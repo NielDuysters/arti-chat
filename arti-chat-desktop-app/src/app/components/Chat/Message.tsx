@@ -8,11 +8,34 @@ export default function Message({ message }) {
         return `${hours}:${minutes}`;
     }
 
+    const statusIndicator = (sent_status) => {
+        if (sent_status) {
+            return (
+                <img
+                    className="message__sent-status"
+                    alt="Sent successfully"
+                    title="Sent successfully"
+                    src="/src/assets/message-sent.png"
+                />
+            )
+        }
+
+        return (
+            <img
+                className="message__sent-status"
+                alt="Message pending"
+                title="Message pending"
+                src="/src/assets/message-pending.png"
+            />
+        )
+    }
+
     return (
-        <div className={`message ${message.is_incoming ? "message--incoming" : "message--outgoing"}`}>
+        <div className={`message ${message.is_incoming ? "message--incoming" : "message--outgoing"} ${message.optimistic ? "message--optimistic" : ""}`}>
             <span className="message__body">{message.body}</span>
             <div className="message__info">
-                <span className="message__timestamp">{formatTimeFromTs(message.timestamp)}</span>
+                <span className="message__timestamp">{!message.optimistic && formatTimeFromTs(message.timestamp)}</span>
+                {!message.is_incoming && !message.optimistic && statusIndicator(message.sent_status)}
             </div>
         </div>
     );
