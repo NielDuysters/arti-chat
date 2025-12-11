@@ -33,6 +33,15 @@
     }
   }
 
+  &--unverified {
+    background: var(--error-color-primary);
+    border: solid 2px var(--error-color-secondary);
+    
+    .message__timestamp {
+      color: var(--text-white);
+    }
+  }
+
   &__info {
     position: absolute;
     right: 7px;
@@ -50,6 +59,20 @@
 
   &__sent-status {
     width: 14px;
+  }
+
+  &__unverified-error {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    font-weight: 600;
+    margin-bottom: 10px;
+
+    &__image {
+      width: 25px;
+    }
   }
 }
 

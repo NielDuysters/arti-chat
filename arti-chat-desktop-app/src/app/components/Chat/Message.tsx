@@ -30,8 +30,25 @@ export default function Message({ message }) {
         )
     }
 
+    const unverifiedError = (verified_status) => {
+        if (!verified_status) {
+            return (
+                <div className="message__unverified-error">
+                    <img
+                        className="message__unverified-error__image"
+                        alt="Error: "
+                        title="Failed to verify authenticity"
+                        src="/src/assets/error.png"
+                    />
+                    <span>Failed to verify authenticity</span>
+                </div>
+            )
+        }
+    }
+
     return (
-        <div className={`message ${message.is_incoming ? "message--incoming" : "message--outgoing"} ${message.optimistic ? "message--optimistic" : ""}`}>
+        <div className={`message ${message.is_incoming ? "message--incoming" : "message--outgoing"} ${message.optimistic ? "message--optimistic" : ""} ${message.is_incoming && !message.verified_status ? "message--unverified" : ""}`}>
+            {!message.optimistic && message.is_incoming && unverifiedError(message.verified_status)}
             <span className="message__body">{message.body}</span>
             <div className="message__info">
                 <span className="message__timestamp">{!message.optimistic && formatTimeFromTs(message.timestamp)}</span>

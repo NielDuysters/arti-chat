@@ -7,6 +7,7 @@ export interface Message {
     timestamp: number;
     is_incoming: boolean;
     sent_status: boolean;
+    verified_status: boolean;
 }
 
 export function useChat(activeContact) {
@@ -43,6 +44,7 @@ export function useChat(activeContact) {
                 timestamp: Date.now(),
                 is_incoming: false,
                 sent_status: false,
+                verified_status: true,
                 optimistic: true,
             }
         ])
