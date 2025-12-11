@@ -1,7 +1,7 @@
 //! Remote Procedure Call commands.
 
 use async_trait::async_trait;
-use crate::{client, db::{self, DbModel}, error::RpcError, ipc::MessageToUI};
+use crate::{client, db::{self, DbModel, DbUpdateModel}, error::RpcError, ipc::MessageToUI};
 
 /// List of RPC commands.
 #[derive(serde::Deserialize)]
@@ -105,7 +105,8 @@ impl RpcCommand {
         tx: &Option<tokio::sync::mpsc::UnboundedSender<MessageToUI>>,
         client: &client::Client,
     ) -> Result<(), RpcError> {
-        db::MessageDb {
+        // Insert message into db.
+        let message_id = db::MessageDb {
             contact_onion_id: to.to_string(),
             body: text.to_string(),
             timestamp: chrono::Utc::now().timestamp() as i32,
@@ -113,6 +114,14 @@ impl RpcCommand {
             sent_status: false,
             verified_status: false,
         }.insert(client.db_conn.clone()).await?;
+
+        // Send message to peer.
+        if let Ok(_) = client.send_message_to_peer(to, text).await {
+            db::UpdateMessageDb {
+                id: message_id.expect_i64()?,
+                sent_status: Some(true),
+            }.update(client.db_conn.clone()).await?;
+        } 
 
         // By sending a incoming message to the UI over broadcast, the UI will reload the chat.
         #[derive(serde::Serialize)]

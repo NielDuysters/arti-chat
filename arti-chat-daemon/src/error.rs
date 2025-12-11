@@ -70,6 +70,14 @@ pub enum ClientError {
     /// HiddenServiceClientError.
     #[error("Arti HiddenServiceClientError: {0}")]
     ArtiHiddenServiceClientError(#[from] tor_hsservice::ClientError),
+    
+    /// Serde Json Error.
+    #[error("serde_json error: {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
+    
+    /// I/O Error.
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 /// Errors related to database.
@@ -118,4 +126,8 @@ pub enum RpcError {
     /// Database error.
     #[error("Database error: {0}")]
     DatabaseError(#[from] DatabaseError),
+    
+    /// Error in client.
+    #[error("Arti Chat Client error: {0}")]
+    ClientError(#[from] ClientError),
 }

@@ -2,9 +2,9 @@
 //! services like the database, onion service,...
 
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
-use crate::{db::{self, DbModel}, error};
+use crate::{db::{self, DbModel}, error, message};
 use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
-use futures::{AsyncReadExt, Stream, StreamExt};
+use futures::{AsyncReadExt, AsyncWriteExt, Stream, StreamExt};
 use tokio::sync::Mutex as TokioMutex;
 use tor_cell::relaycell::msg::Connected;
 use tor_proto::client::stream::IncomingStreamRequest;
@@ -87,6 +87,31 @@ impl Client {
                 let _ = Self::handle_request(request, message_tx).await;
             });
         }
+
+        Ok(())
+    }
+
+    /// Send message to peer.
+    pub async fn send_message_to_peer(
+        &self,
+        to_onion_id: &str,
+        text: &str, 
+    ) -> Result<(), error::ClientError> {
+        // Open stream to peer.
+        let target = format!("{}:80", to_onion_id);
+        let mut stream = self.tor_client.connect(&target).await?;
+
+        // Make payload.
+        let payload = message::MessagePayload {
+            sender_onion_id: self.get_identity_unredacted()?,
+            text: text.into(),
+        };
+        let mut payload = serde_json::to_string(&payload)?;
+        payload.push('\0'); // Null-byte to signify ending of stream.
+        
+        // Send payload over stream to peer.
+        stream.write_all(payload.as_bytes()).await?;
+        stream.flush().await.ok();
 
         Ok(())
     }

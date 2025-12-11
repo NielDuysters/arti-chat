@@ -48,6 +48,7 @@ pub mod db;
 pub mod client;
 pub mod error;
 pub mod ipc;
+pub mod message;
 pub mod rpc;
 
 /// Project directory storing sqlite db + config.
