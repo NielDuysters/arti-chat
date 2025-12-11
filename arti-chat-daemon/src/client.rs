@@ -2,7 +2,7 @@
 //! services like the database, onion service,...
 
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
-use crate::{db::{self, DbModel}, error, message};
+use crate::{db::{self, DbModel, DbUpdateModel}, error, message};
 use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
 use futures::{AsyncReadExt, AsyncWriteExt, Stream, StreamExt};
 use tokio::sync::Mutex as TokioMutex;
@@ -83,8 +83,9 @@ impl Client {
 
         while let Some(request) = requests.next().await {
             let message_tx = message_tx.clone();
+            let db_conn = self.db_conn.clone();
             tokio::spawn(async move {
-                let _ = Self::handle_request(request, message_tx).await;
+                let _ = Self::handle_request(request, message_tx, db_conn).await;
             });
         }
 
@@ -103,7 +104,7 @@ impl Client {
 
         // Make payload.
         let payload = message::MessagePayload {
-            sender_onion_id: self.get_identity_unredacted()?,
+            onion_id: self.get_identity_unredacted()?,
             text: text.into(),
         };
         let mut payload = serde_json::to_string(&payload)?;
@@ -200,6 +201,7 @@ impl Client {
         request: tor_hsservice::StreamRequest,
         message_tx: tokio::sync::mpsc::UnboundedSender<String>,  // Used to send incoming messages
         // to IPC server.
+        db_conn: DatabaseConnection,
     ) -> Result<(), error::ClientError> {
         match request.request() {
             IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
@@ -230,7 +232,16 @@ impl Client {
                 let body = String::from_utf8_lossy(&read_buffer);
                 tracing::debug!("Received request: {}", body);
 
-                message_tx.send(body.to_string());
+                let message_payload : message::MessagePayload = serde_json::from_str(&body)?;
+                db::MessageDb {
+                    contact_onion_id: message_payload.onion_id.to_string(),
+                    body: message_payload.text.to_string(),
+                    timestamp: chrono::Utc::now().timestamp() as i32,
+                    is_incoming: true,
+                    sent_status: false,
+                    verified_status: false,
+                }.insert(db_conn.clone()).await?;
+                let _ = message_tx.send(body.to_string());
 
                 Ok(())
             },
