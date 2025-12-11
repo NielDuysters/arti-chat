@@ -7,6 +7,33 @@ use tokio::sync::Mutex as TokioMutex;
 
 pub type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
 
+/// Primary key (after insert) can be of type can be String (onion_id) or int (id).
+pub enum PrimaryKey<'a> {
+    /// Caller knows PK at insert.
+    Provided(&'a str),
+
+    /// PK is autoincrement and not known at insert.
+    AutoIncrement,
+}
+
+/// InsertID can be Integer or Text.
+pub enum InsertId {
+    /// Text.
+    Text(String),
+    
+    /// Integer.
+    Integer(i64),
+}
+
+impl InsertId {
+     pub fn expect_i64(&self) -> Result<i64, error::DatabaseError> {
+        match self {
+            InsertId::Integer(id) => Ok(*id),
+            InsertId::Text(_) => Err(error::DatabaseError::InvalidPrimaryKeyType),
+        }
+    }
+}
+
 /// Create database tables + return connection.
 pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection, error::DatabaseError> {
     let conn = Connection::open(database_path(project_dir)?)?;
@@ -65,6 +92,8 @@ pub struct UserDb {
 
 impl DbModel for UserDb {
     fn table() -> &'static str { "user" }
+    
+    fn primary_key(&self) -> PrimaryKey { PrimaryKey::Provided(&self.onion_id) }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -108,6 +137,8 @@ pub struct ContactDb {
 
 impl DbModel for ContactDb {
     fn table() -> &'static str { "contact" }
+
+    fn primary_key(&self) -> PrimaryKey { PrimaryKey::Provided(&self.onion_id) }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -154,8 +185,20 @@ pub struct MessageDb {
     pub verified_status: bool,
 }
 
+/// Type allowing to update a message.
+#[derive(serde::Serialize)]
+pub struct UpdateMessageDb {
+    /// PK of message to update.
+    pub id: i64,
+
+    /// Optional update for sent_status column.
+    pub sent_status: Option<bool>,
+}
+
 impl DbModel for MessageDb {
     fn table() -> &'static str { "message" }
+    
+    fn primary_key(&self) -> PrimaryKey { PrimaryKey::AutoIncrement }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -176,6 +219,18 @@ impl DbModel for MessageDb {
             sent_status: row.get("sent_status")?,
             verified_status: row.get("verified_status")?,
         })
+    }
+}
+
+impl DbUpdateModel<MessageDb> for UpdateMessageDb {
+    fn pk_column() ->  &'static str { "id" }
+    
+    fn pk_value(&self) -> &dyn ToSql { &self.id }
+    
+    fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)> {
+        vec![
+            ("sent_status", self.sent_status.as_ref().map(|v| v as &dyn ToSql)),
+        ]
     }
 }
 
@@ -214,6 +269,9 @@ pub trait DbModel : Sized {
     /// Return table name.
     fn table() -> &'static str;
 
+    /// Primary key can be known or is autoincrement.
+    fn primary_key(&self) -> PrimaryKey;
+
     /// List of (column -> values) for INSERT (..column) VALUES (..values).
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)>;
 
@@ -221,7 +279,7 @@ pub trait DbModel : Sized {
     fn from_row(row: &Row) -> rusqlite::Result<Self>;
 
     /// Default insert behavior.
-    async fn insert(&self, conn: DatabaseConnection) -> Result<(), error::DatabaseError> {
+    async fn insert(&self, conn: DatabaseConnection) -> Result<InsertId, error::DatabaseError> {
         let conn = conn.lock().await;
 
         let columns: Vec<&str> = self.insert_values().iter().map(|(c, _)| *c).collect();
@@ -235,7 +293,10 @@ pub trait DbModel : Sized {
         );
 
         conn.execute(&sql, values.as_slice())?;
-        Ok(())
+        match self.primary_key() {
+            PrimaryKey::Provided(id) => Ok(InsertId::Text(id.into())),
+            PrimaryKey::AutoIncrement => Ok(InsertId::Integer(conn.last_insert_rowid())),
+        }
     }
 
     /// Default select behavior.
@@ -272,6 +333,52 @@ pub trait DbModel : Sized {
         Ok(results)
     }
 }
+
+/// Public trait with default behavior to update a model.
+#[async_trait]
+pub trait DbUpdateModel<R: DbModel> {
+    /// PK column_name for update.
+    fn pk_column() -> &'static str;
+
+    /// PK value for WHERE clause.
+    fn pk_value(&self) -> &dyn ToSql;
+    
+    /// List of (column -> values) for UPDATE column=value.
+    fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)>;
+
+    /// Default update behavior.
+    async fn update(&self, conn: DatabaseConnection) -> Result<(), error::DatabaseError> {
+        let conn = conn.lock().await;
+        let mut sets = Vec::new();
+        let mut params: Vec<&dyn ToSql> = Vec::new();
+
+        // Push SET and VALUE in vecs where property in Update struct is set.
+        self.update_values()
+            .into_iter()
+            .filter_map(|(c, opt)| opt.map(|v| (c, v)))
+            .for_each(|(c, v)| {
+                sets.push(format!("{} = ?", c));
+                params.push(v);
+            });
+
+        if sets.is_empty() {
+            return Ok(());
+        }
+
+        // Push PK for WHERE.
+        params.push(self.pk_value());
+
+        let sql = format!(
+            "UPDATE {} SET {} WHERE {} = ?",
+            R::table(),
+            sets.join(","),
+            Self::pk_column(),
+        );
+
+        conn.execute(&sql, params.as_slice())?;
+        Ok(())
+    }
+} 
 
 // Helper method to get path do .db file in project_dir.
 fn database_path(project_dir: std::path::PathBuf) -> Result<std::path::PathBuf, error::DatabaseError> {

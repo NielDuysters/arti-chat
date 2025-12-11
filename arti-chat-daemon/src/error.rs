@@ -82,6 +82,10 @@ pub enum DatabaseError {
     /// Rusqlite error.
     #[error("rusqlite error: {0}")]
     RusqliteError(#[from] rusqlite::Error),
+    
+    /// Invalid primary key type.
+    #[error("Invalid primary key type.")]
+    InvalidPrimaryKeyType,
 }
 
 /// Errors related to IPC server.
