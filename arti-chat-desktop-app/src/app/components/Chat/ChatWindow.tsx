@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import Jdenticon from "react-jdenticon";
 
 import { useChat } from "../../hooks/useChat";
 
@@ -47,7 +48,9 @@ export default function ChatWindow({ activeContact }) {
         <div className="screen screen--chat chat">
             <div className="chat__top">
                 <div className="chat__contact-info">
-                    <div className="chat__contact-info__image"></div>
+                    <div className="chat__contact-info__image">
+                        <Jdenticon size="35" value={activeContact.nickname} />
+                    </div>
                     <span className="chat__contact-info__nickname">{activeContact.nickname}</span>
                 </div>
             </div>
