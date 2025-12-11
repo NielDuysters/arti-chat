@@ -78,6 +78,10 @@ pub enum ClientError {
     /// I/O Error.
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
+
+    /// Error related to message.
+    #[error("Message error: {0}")]
+    MessageError(#[from] MessageError),
 }
 
 /// Errors related to database.
@@ -130,4 +134,24 @@ pub enum RpcError {
     /// Error in client.
     #[error("Arti Chat Client error: {0}")]
     ClientError(#[from] ClientError),
+}
+
+/// Errors related to message.
+#[derive(Error, Debug)]
+pub enum MessageError {
+    /// Serde Json Error.
+    #[error("serde_json error: {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
+    
+    /// Hex decode error.
+    #[error("Hex decode error: {0}")]
+    HexDecodeError(#[from] hex::FromHexError),
+    
+    /// Invalid key length.
+    #[error("Key length is not 32 bytes.")]
+    InvalidKeyLength,
+    
+    /// Ed25519 error.
+    #[error("ed25519 error: {0}")]
+    Ed25519Error(#[from] ed25519_dalek::ed25519::Error),
 }

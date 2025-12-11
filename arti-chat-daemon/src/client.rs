@@ -106,12 +106,16 @@ impl Client {
         let payload = message::MessagePayload {
             onion_id: self.get_identity_unredacted()?,
             text: text.into(),
+            timestamp: chrono::Utc::now().timestamp(),
         };
-        let mut payload = serde_json::to_string(&payload)?;
-        payload.push('\0'); // Null-byte to signify ending of stream.
+
+        // Sign payload.
+        let signed_payload = payload.sign_message(&mut self.private_key.clone())?;
+        let mut signed_payload = serde_json::to_string(&signed_payload)?;
+        signed_payload.push('\0'); // Null-byte to signify ending of stream.
         
         // Send payload over stream to peer.
-        stream.write_all(payload.as_bytes()).await?;
+        stream.write_all(signed_payload.as_bytes()).await?;
         stream.flush().await.ok();
 
         Ok(())
@@ -232,16 +236,24 @@ impl Client {
                 let body = String::from_utf8_lossy(&read_buffer);
                 tracing::debug!("Received request: {}", body);
 
-                let message_payload : message::MessagePayload = serde_json::from_str(&body)?;
+                // Verify incoming signed payload.
+                let signed_payload: message::SignedMessagePayload = serde_json::from_str(&body)?;
+                let payload = &signed_payload.payload;
+                let contact_public_key = db::ContactDb::retrieve(&payload.onion_id, db_conn.clone()).await?.public_key;
+                let verified = signed_payload.verify_message(&contact_public_key)?;
+
+                // Store incoming message in db.
                 db::MessageDb {
-                    contact_onion_id: message_payload.onion_id.to_string(),
-                    body: message_payload.text.to_string(),
-                    timestamp: chrono::Utc::now().timestamp() as i32,
+                    contact_onion_id: payload.onion_id.to_string(),
+                    body: payload.text.to_string(),
+                    timestamp: payload.timestamp as i32,
                     is_incoming: true,
                     sent_status: false,
-                    verified_status: false,
+                    verified_status: verified,
                 }.insert(db_conn.clone()).await?;
-                let _ = message_tx.send(body.to_string());
+
+                // Send to message channel.
+                let _ = message_tx.send(serde_json::to_string(payload)?);
 
                 Ok(())
             },
