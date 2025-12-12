@@ -6,7 +6,7 @@ import { User, useUser } from "../../hooks/useUser";
 
 export default function UserDetail()  {
     const [success, setSuccess] = useState<boolean | null>(null);
-    const { user } = useUser();
+    const { user, updateUser } = useUser();
 
     if (!user) {
         return;
@@ -18,6 +18,10 @@ export default function UserDetail()  {
             <Form
                 fields={updateUserForm(user)}
                 onSubmit={async (values) => {
+                    return await updateUser({
+                        public_key: values.public_key,
+                        private_key: values.private_key,
+                    }); 
                 }}
                 success={success}
                 setSuccess={setSuccess}

@@ -15,15 +15,26 @@ export function useUser() {
         loadUser();
     }, []);
 
+    // Load user.
     const loadUser = useCallback(async () => {
         const user = await invoke<User>("load_user");
-        console.log(user)
         setUser(user);
     }, []);
 
+    // Update user.
+    const updateUser = useCallback(
+        async ({public_key, private_key}: {public_key: string | null, private_key: string | null}): boolean => {
+            return await invoke("update_user", {
+                publicKey: public_key,
+                privateKey: private_key,
+            });
+        },
+        []
+    );
 
     return {
         user,
+        updateUser,
     };
 }
 
