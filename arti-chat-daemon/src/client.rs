@@ -2,9 +2,10 @@
 //! services like the database, onion service,...
 
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
-use crate::{db::{self, DbModel, DbUpdateModel}, error, message};
+use crate::{db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI}, message};
 use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
 use futures::{AsyncReadExt, AsyncWriteExt, Stream, StreamExt};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::Mutex as TokioMutex;
 use tor_cell::relaycell::msg::Connected;
 use tor_proto::client::stream::IncomingStreamRequest;
@@ -17,7 +18,7 @@ type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>;
 pub struct Client {
     /// Arti Tor Client.
     pub tor_client: ArtiTorClient,
-    
+
     /// Database connection.
     pub db_conn: DatabaseConnection,
 
@@ -113,12 +114,54 @@ impl Client {
         let signed_payload = payload.sign_message(&mut self.private_key.clone())?;
         let mut signed_payload = serde_json::to_string(&signed_payload)?;
         signed_payload.push('\0'); // Null-byte to signify ending of stream.
-        
+
         // Send payload over stream to peer.
         stream.write_all(signed_payload.as_bytes()).await?;
         stream.flush().await.ok();
 
         Ok(())
+    }
+
+    /// Retry sending failed messages.
+    pub async fn retry_failed_messages(
+        &self,
+        broadcast_writers: std::sync::Arc<TokioMutex<Vec<UnboundedSender<ipc::MessageToUI>>>>,
+    ) -> Result<(), error::ClientError> {
+        loop {
+            let failed_messages = db::MessageDb::failed_messages(self.db_conn.clone()).await?;
+            for msg in &failed_messages {
+                tracing::info!("Retrying message {}", msg.id);
+
+                // Retry sending.
+                let retry = self
+                    .send_message_to_peer(&msg.contact_onion_id, &msg.body).await;
+
+                if retry.is_ok() {
+                    tracing::info!("Retry success message {}", msg.id);
+                    
+                    // On success update sent_status + update UI.
+                    db::UpdateMessageDb {
+                        id: msg.id,
+                        sent_status: Some(true),
+                    }.update(self.db_conn.clone()).await?;
+
+                    #[derive(serde::Serialize)]
+                    struct SendIncomingMessage {
+                        pub onion_id: String,
+                    }
+                    let incoming_message = SendIncomingMessage { onion_id: msg.contact_onion_id.to_string() };
+                    let incoming_message = serde_json::to_string(&incoming_message)? + "\n";
+                    let bw_writers = broadcast_writers.lock().await;
+                    for tx in bw_writers.iter() {
+                        let _ = tx.send(MessageToUI::Broadcast(incoming_message.clone()));
+                    }
+                } else {
+                    tracing::info!("Retry failed message {}", msg.id);
+                }
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
+        }
     }
 
     /// Get onion service identity unredacted.
@@ -138,13 +181,13 @@ impl Client {
 
         Ok(client)
     }
-    
+
     async fn launch_onion_service(client: &ArtiTorClient)
-        -> Result<(
-            std::sync::Arc<tor_hsservice::RunningOnionService>,
-            OnionServiceRequestStream,
-        ), error::ClientError> {
-            let config = OnionServiceConfigBuilder::default()
+    -> Result<(
+        std::sync::Arc<tor_hsservice::RunningOnionService>,
+        OnionServiceRequestStream,
+    ), error::ClientError> {
+        let config = OnionServiceConfigBuilder::default()
             .nickname("arti-chat-service".parse()?)
             .build()?;
 
@@ -155,12 +198,12 @@ impl Client {
             }
         };
         let request_stream = Box::new(request_stream);
-        
+
         tracing::info!("Onion service launched.");
-    
+
         Ok((onion_service, request_stream))
     }
-    
+
     fn get_identity_unredacted_inner(onion_address: Option<arti_client::HsId>) -> Result<String, error::ClientError> {
         onion_address
             .ok_or(error::ClientError::EmptyHsid)
@@ -240,10 +283,11 @@ impl Client {
                 let signed_payload: message::SignedMessagePayload = serde_json::from_str(&body)?;
                 let payload = &signed_payload.payload;
                 let contact_public_key = db::ContactDb::retrieve(&payload.onion_id, db_conn.clone()).await?.public_key;
-                let verified = signed_payload.verify_message(&contact_public_key)?;
+                let verified = signed_payload.verify_message(&contact_public_key).is_ok();
 
                 // Store incoming message in db.
                 db::MessageDb {
+                    id: 0,
                     contact_onion_id: payload.onion_id.to_string(),
                     body: payload.text.to_string(),
                     timestamp: payload.timestamp as i32,

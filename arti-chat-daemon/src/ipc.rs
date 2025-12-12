@@ -57,6 +57,13 @@ pub async fn run_ipc_server(
         std::vec::Vec::<UnboundedSender<MessageToUI>>::new()
     ));
 
+    // Spawn task to retry failed messages.
+    let bw_clone = broadcast_writers.clone();
+    let client_clone = client.clone();
+    tokio::spawn(async move {
+        let _ = client_clone.retry_failed_messages(bw_clone).await;
+    });
+
     loop {
         tokio::select! {
             // Incoming chat message.

@@ -219,6 +219,9 @@ impl DbUpdateModel<ContactDb> for UpdateContactDb {
 /// Represents row in message table.
 #[derive(serde::Serialize)]
 pub struct MessageDb {
+    /// PK Id of message.
+    pub id: i64,
+
     /// Column contact_onion_id.
     pub contact_onion_id: String,
 
@@ -266,6 +269,7 @@ impl DbModel for MessageDb {
 
     fn from_row(row: &Row) -> rusqlite::Result<Self> {
         Ok(Self {
+            id: row.get("id")?,
             contact_onion_id: row.get("contact_onion_id")?,
             body: row.get("body")?,
             timestamp: row.get("timestamp")?,
@@ -305,6 +309,34 @@ impl MessageDb {
         )?;
         
         let rows = stmt.query_map(params![onion_id], |row| {
+            Ok(Self::from_row(row)?)
+        })?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            results.push(row?);
+        }
+
+        Ok(results)
+    }
+    
+    /// Retrieve failed chat message.
+    pub async fn failed_messages(
+        conn: DatabaseConnection
+    ) -> Result<Vec<Self>, error::DatabaseError>  {
+        let conn = conn.lock().await;
+
+        let mut stmt = conn.prepare(
+            "SELECT * FROM MESSAGE
+             WHERE
+                sent_status = 0
+              AND
+                is_incoming = 0
+             ORDER BY
+                timestamp DESC"
+        )?;
+        
+        let rows = stmt.query_map([], |row| {
             Ok(Self::from_row(row)?)
         })?;
 

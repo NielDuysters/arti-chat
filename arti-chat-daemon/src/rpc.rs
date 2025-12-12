@@ -149,6 +149,7 @@ impl RpcCommand {
     ) -> Result<(), RpcError> {
         // Insert message into db.
         let message_id = db::MessageDb {
+            id: 0,
             contact_onion_id: to.to_string(),
             body: text.to_string(),
             timestamp: chrono::Utc::now().timestamp() as i32,
