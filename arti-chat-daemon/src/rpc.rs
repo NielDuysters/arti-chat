@@ -24,6 +24,9 @@ pub enum RpcCommand {
     
     /// Load user.
     LoadUser,
+
+    /// Update user.
+    UpdateUser { public_key: Option<String>, private_key: Option<String>, }
 }
 
 /// LoadContacts response.
@@ -91,6 +94,14 @@ impl RpcCommand {
                 self.handle_update_contact(onion_id, nickname.as_deref(), public_key.as_deref(), &tx_rpc, client.db_conn.clone()).await,
             RpcCommand::LoadUser => 
                 self.handle_load_user(&client.get_identity_unredacted()?, &tx_rpc, client.db_conn.clone()).await,
+            RpcCommand::UpdateUser { public_key, private_key } =>
+                self.handle_update_user(
+                    &client.get_identity_unredacted()?,
+                    public_key.as_deref(),
+                    private_key.as_deref(),
+                    &tx_rpc,
+                    client.db_conn.clone()
+            ).await,
         }
     }
 
@@ -218,6 +229,25 @@ impl RpcCommand {
 
         LoadUserResponse {
             user: serde_json::to_value(user)?,
+        }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_update_user(
+        &self,
+        onion_id: &str,
+        public_key: Option<&str>,
+        private_key: Option<&str>,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        db_conn: db::DatabaseConnection,
+    ) -> Result<(), RpcError> {
+        let success = db::UpdateUserDb {
+            onion_id: onion_id.into(),
+            public_key: public_key.map(|pk| pk.to_string()),
+            private_key: private_key.map(|n| n.to_string()),
+        }.update(db_conn.clone()).await.is_ok();
+
+        SuccessResponse {
+            success,
         }.send_rpc_reply(tx)
     }
 }

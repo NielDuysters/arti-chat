@@ -91,6 +91,19 @@ pub struct UserDb {
     pub public_key: String,
 }
 
+/// Type allowing to update user.
+#[derive(serde::Serialize)]
+pub struct UpdateUserDb {
+    /// PK of user to update.
+    pub onion_id: String,
+
+    /// Optional update for public_key column.
+    pub public_key: Option<String>,
+    
+    /// Optional update for private_key column.
+    pub private_key: Option<String>,
+}
+
 impl DbModel for UserDb {
     fn table() -> &'static str { "user" }
     
@@ -112,6 +125,19 @@ impl DbModel for UserDb {
             private_key: row.get("private_key")?,
             public_key: row.get("public_key")?,
         })
+    }
+}
+
+impl DbUpdateModel<UserDb> for UpdateUserDb {
+    fn pk_column() ->  &'static str { "onion_id" }
+    
+    fn pk_value(&self) -> &dyn ToSql { &self.onion_id }
+    
+    fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)> {
+        vec![
+            ("public_key", self.public_key.as_ref().map(|v| v as &dyn ToSql)),
+            ("private_key", self.private_key.as_ref().map(|v| v as &dyn ToSql)),
+        ]
     }
 }
 
