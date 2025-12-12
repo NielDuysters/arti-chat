@@ -135,6 +135,19 @@ pub struct ContactDb {
     pub last_viewed_at: i32,
 }
 
+/// Type allowing to update a contact.
+#[derive(serde::Serialize)]
+pub struct UpdateContactDb {
+    /// PK of contact to update.
+    pub onion_id: String,
+
+    /// Optional update for nickname column.
+    pub nickname: Option<String>,
+    
+    /// Optional update for public_key column.
+    pub public_key: Option<String>,
+}
+
 impl DbModel for ContactDb {
     fn table() -> &'static str { "contact" }
 
@@ -158,6 +171,19 @@ impl DbModel for ContactDb {
             last_message_at: row.get("last_message_at")?,
             last_viewed_at: row.get("last_viewed_at")?,
         })
+    }
+}
+
+impl DbUpdateModel<ContactDb> for UpdateContactDb {
+    fn pk_column() ->  &'static str { "onion_id" }
+    
+    fn pk_value(&self) -> &dyn ToSql { &self.onion_id }
+    
+    fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)> {
+        vec![
+            ("nickname", self.nickname.as_ref().map(|v| v as &dyn ToSql)),
+            ("public_key", self.public_key.as_ref().map(|v| v as &dyn ToSql)),
+        ]
     }
 }
 

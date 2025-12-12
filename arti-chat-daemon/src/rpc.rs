@@ -18,6 +18,9 @@ pub enum RpcCommand {
 
     /// Add contact.
     AddContact { nickname: String, onion_id: String, public_key: String },
+    
+    /// Update contact.
+    UpdateContact { onion_id: String, nickname: Option<String>, public_key: Option<String> },
 }
 
 /// LoadContacts response.
@@ -36,13 +39,13 @@ pub struct LoadChatResponse {
 }
 impl SendRpcReply for LoadChatResponse {}
 
-/// AddContact response.
+/// General success response for calls only returning a success field.
 #[derive(serde::Serialize)]
-pub struct AddContactResponse {
+pub struct SuccessResponse {
     /// Success status.
     pub success: bool,
 }
-impl SendRpcReply for AddContactResponse {}
+impl SendRpcReply for SuccessResponse {}
 
 /// Trait to define default behavior to send RPC reply.
 #[async_trait]
@@ -73,6 +76,8 @@ impl RpcCommand {
                 self.handle_send_message(to, text, &tx_broadcast, client).await,
             RpcCommand::AddContact { nickname, onion_id, public_key } =>
                 self.handle_add_contact(nickname, onion_id, public_key, &tx_rpc, client.db_conn.clone()).await,
+            RpcCommand::UpdateContact { onion_id, nickname, public_key } =>
+                self.handle_update_contact(onion_id, nickname.as_deref(), public_key.as_deref(), &tx_rpc, client.db_conn.clone()).await,
         }
     }
 
@@ -166,7 +171,26 @@ impl RpcCommand {
             last_viewed_at: 0,
         }.insert(db_conn.clone()).await.is_ok();
 
-        AddContactResponse {
+        SuccessResponse {
+            success,
+        }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_update_contact(
+        &self,
+        onion_id: &str,
+        nickname: Option<&str>,
+        public_key: Option<&str>,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        db_conn: db::DatabaseConnection,
+    ) -> Result<(), RpcError> {
+        let success = db::UpdateContactDb {
+            onion_id: onion_id.into(),
+            nickname: nickname.map(|n| n.to_string()),
+            public_key: public_key.map(|pk| pk.to_string()),
+        }.update(db_conn.clone()).await.is_ok();
+
+        SuccessResponse {
             success,
         }.send_rpc_reply(tx)
     }
