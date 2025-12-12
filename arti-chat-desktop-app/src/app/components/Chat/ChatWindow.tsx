@@ -53,6 +53,11 @@ export default function ChatWindow({ activeContact }) {
                     </div>
                     <span className="chat__contact-info__nickname">{activeContact.nickname}</span>
                 </div>
+                <img
+                    className="chat__top__details"
+                    alt="Details"
+                    src="/src/assets/dots.png"
+                />
             </div>
 
             <div

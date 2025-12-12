@@ -1,6 +1,7 @@
 .chat__top {
   width: 100%;
   height: 75px;
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
@@ -9,10 +10,14 @@
   position: sticky;
   left: 0;
   top: 0;
+  
+  &__details {
+    width: 25px;
+  }
 }
 
 .chat__contact-info {
-  display: flex;
+  display: inline-flex;
   flex-direction: row;
   align-items: center;
   gap: 15px;
