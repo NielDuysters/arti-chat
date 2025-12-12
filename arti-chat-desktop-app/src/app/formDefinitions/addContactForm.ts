@@ -10,14 +10,14 @@ export const addContactForm: FieldConfig[] = [
         required: true,
     },
     {
-        name: "onion-id",
+        name: "onion_id",
         label: "Onion ID",
         type: FieldType.Text,
         placeholder: "abcdef.onion",
         required: true,
     },
     {
-        name: "public-key",
+        name: "public_key",
         label: "Public key",
         type: FieldType.Text,
         placeholder: "fwejewfpewijfepwjfew",

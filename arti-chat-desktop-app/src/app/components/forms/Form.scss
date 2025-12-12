@@ -13,5 +13,13 @@
     cursor: pointer;
     align-self: flex-start;
     transition: background 0.15s ease, transform 0.1s ease;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+
+    &__status {
+      width: 15px;
+    }
   }
 }

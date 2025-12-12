@@ -18,18 +18,21 @@ export interface FieldConfig {
 export interface FormProps {
     fields: FieldConfig[];
     onSubmit: (values: Record<string, any>) => void;
+    success?: boolean;
+    setSuccess: (value: boolean | null) => void;
 }
 
-export default function Form({ fields, onSubmit }: FormProps) {
+export default function Form({ fields, onSubmit, success, setSuccess }: FormProps) {
     const [values, setValues] = useState<Record<string, any>>({});
 
     const updateValue = (name: string, value: any) => {
         setValues((v) => ({ ...v, [name]: value }));
     };
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        onSubmit(values);
+        const result = await onSubmit(values);
+        setSuccess(result);
     };
 
     return (
@@ -43,7 +46,26 @@ export default function Form({ fields, onSubmit }: FormProps) {
                 />
             ))}
 
-            <button className="form__submit-btn" type="submit">Submit</button>
+            <button
+                className="form__submit-btn"
+                type="submit"
+            >
+                {success === true &&
+                    <img
+                        className="form__submit-btn__status"
+                        alt="Success"
+                        src="/src/assets/form-success.png"
+                    />
+                }
+                {success === false &&
+                    <img
+                        className="form__submit-btn__status"
+                        alt="Failed"
+                        src="/src/assets/form-failed.png"
+                    />
+                }
+                Submit
+            </button>
         </form>
     );
 }
