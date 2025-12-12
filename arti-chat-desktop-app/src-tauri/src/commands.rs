@@ -27,3 +27,9 @@ pub async fn add_contact(nickname: String, onion_id: String, public_key: String)
     Ok(response.success)
 }
 
+#[tauri::command]
+pub async fn update_contact(onion_id: String, nickname: Option<String>, public_key: Option<String>) -> Result<bool, String> {
+    let response = rpc::UpdateContact{ nickname, onion_id, public_key }.receive().await.expect("Failed to update contact.");
+    Ok(response.success)
+}
+

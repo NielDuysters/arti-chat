@@ -40,6 +40,12 @@ pub struct SendMessage {
 
 impl SendRpcCommand for SendMessage {}
 
+/// General success response for calls only returning a success field.
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct SuccessResponse {
+    pub success: bool,
+}
+
 /// --- Add contact ---
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct AddContact {
@@ -48,13 +54,19 @@ pub struct AddContact {
     pub public_key: String,
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
-pub struct AddContactResponse {
-    pub success: bool,
+impl SendRpcCommand for AddContact {}
+impl ReceiveRpcReply<SuccessResponse> for AddContact {} 
+
+/// --- Update contact ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct UpdateContact {
+    pub onion_id: String,
+    pub nickname: Option<String>,
+    pub public_key: Option<String>,
 }
 
-impl SendRpcCommand for AddContact {}
-impl ReceiveRpcReply<AddContactResponse> for AddContact {} 
+impl SendRpcCommand for UpdateContact {}
+impl ReceiveRpcReply<SuccessResponse> for UpdateContact {} 
 
 /// Trait to send types as RPC command.
 #[async_trait]
