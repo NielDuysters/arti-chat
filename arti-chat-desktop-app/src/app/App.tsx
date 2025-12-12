@@ -9,6 +9,7 @@ import ContactList from "./components/Contacts/ContactList";
 import Welcome from "./screens/Welcome/Welcome";
 import AddContact from "./screens/AddContact/AddContact";
 import ContactDetails from "./screens/ContactDetails/ContactDetails";
+import UserDetails from "./screens/UserDetails/UserDetails";
 import ChatWindow from "./components/Chat/ChatWindow";
 
 import "./../styles/globals.scss";
@@ -32,13 +33,15 @@ const App = () => {
                 return <AddContact />
             case "contact-details":
                 return <ContactDetails activeContact={activeContact} />
+            case "user-details":
+                return <UserDetails />
         }
     }
 
 
     return (
         <main className="container">
-          <Nav />
+          <Nav setView={setView} />
           <ContactList
             contacts={contacts}
             setActiveContact={setActiveContact}
