@@ -80,6 +80,16 @@ pub struct LoadUserResponse {
 impl SendRpcCommand for LoadUser {}
 impl ReceiveRpcReply<LoadUserResponse> for LoadUser {} 
 
+/// --- Update user ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct UpdateUser {
+    pub public_key: Option<String>,
+    pub private_key: Option<String>,
+}
+
+impl SendRpcCommand for UpdateUser {}
+impl ReceiveRpcReply<SuccessResponse> for UpdateUser {} 
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {
