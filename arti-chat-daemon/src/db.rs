@@ -76,6 +76,7 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
 // --- User ---
 
 /// Represents row in user table.
+#[derive(serde::Serialize)]
 pub struct UserDb {
     /// Column onion_id.
     pub onion_id: String,

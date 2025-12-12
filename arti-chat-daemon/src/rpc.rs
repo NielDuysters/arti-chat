@@ -21,6 +21,9 @@ pub enum RpcCommand {
     
     /// Update contact.
     UpdateContact { onion_id: String, nickname: Option<String>, public_key: Option<String> },
+    
+    /// Load user.
+    LoadUser,
 }
 
 /// LoadContacts response.
@@ -46,6 +49,14 @@ pub struct SuccessResponse {
     pub success: bool,
 }
 impl SendRpcReply for SuccessResponse {}
+
+/// LoadUser response.
+#[derive(serde::Serialize)]
+pub struct LoadUserResponse {
+    /// User.
+    pub user: serde_json::Value,
+}
+impl SendRpcReply for LoadUserResponse {}
 
 /// Trait to define default behavior to send RPC reply.
 #[async_trait]
@@ -78,6 +89,8 @@ impl RpcCommand {
                 self.handle_add_contact(nickname, onion_id, public_key, &tx_rpc, client.db_conn.clone()).await,
             RpcCommand::UpdateContact { onion_id, nickname, public_key } =>
                 self.handle_update_contact(onion_id, nickname.as_deref(), public_key.as_deref(), &tx_rpc, client.db_conn.clone()).await,
+            RpcCommand::LoadUser => 
+                self.handle_load_user(&client.get_identity_unredacted()?, &tx_rpc, client.db_conn.clone()).await,
         }
     }
 
@@ -192,6 +205,19 @@ impl RpcCommand {
 
         SuccessResponse {
             success,
+        }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_load_user(
+        &self,
+        onion_id: &str,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        db_conn: db::DatabaseConnection,
+    ) -> Result<(), RpcError> {
+        let user = db::UserDb::retrieve(onion_id, db_conn.clone()).await?;
+
+        LoadUserResponse {
+            user: serde_json::to_value(user)?,
         }.send_rpc_reply(tx)
     }
 }
