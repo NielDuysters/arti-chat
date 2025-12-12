@@ -19,3 +19,10 @@ pub struct Message {
     pub verified_status: bool,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct User {
+    pub onion_id: String,
+    pub nickname: String,
+    pub public_key: String,
+    pub private_key: String,
+}

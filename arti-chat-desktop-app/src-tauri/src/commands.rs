@@ -33,3 +33,10 @@ pub async fn update_contact(onion_id: String, nickname: Option<String>, public_k
     Ok(response.success)
 }
 
+
+#[tauri::command]
+pub async fn load_user() -> Result<model::User, String> {
+    let response = rpc::LoadUser{}.receive().await.expect("Failed to load user.");
+    Ok(response.user)
+}
+

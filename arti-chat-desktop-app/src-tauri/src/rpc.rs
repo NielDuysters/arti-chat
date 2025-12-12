@@ -68,6 +68,18 @@ pub struct UpdateContact {
 impl SendRpcCommand for UpdateContact {}
 impl ReceiveRpcReply<SuccessResponse> for UpdateContact {} 
 
+/// --- Load user ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct LoadUser {}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct LoadUserResponse {
+    pub user: model::User,
+}
+
+impl SendRpcCommand for LoadUser {}
+impl ReceiveRpcReply<LoadUserResponse> for LoadUser {} 
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {
