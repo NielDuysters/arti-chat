@@ -37,6 +37,7 @@ pub fn run() {
             commands::load_contacts,
             commands::load_chat,
             commands::send_message,
+            commands::add_contact,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

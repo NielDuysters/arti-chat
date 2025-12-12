@@ -40,6 +40,22 @@ pub struct SendMessage {
 
 impl SendRpcCommand for SendMessage {}
 
+/// --- Add contact ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct AddContact {
+    pub nickname: String,
+    pub onion_id: String,
+    pub public_key: String,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct AddContactResponse {
+    pub success: bool,
+}
+
+impl SendRpcCommand for AddContact {}
+impl ReceiveRpcReply<AddContactResponse> for AddContact {} 
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {

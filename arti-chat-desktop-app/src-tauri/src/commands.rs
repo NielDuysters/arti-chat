@@ -21,3 +21,9 @@ pub async fn send_message(to: String, text: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub async fn add_contact(nickname: String, onion_id: String, public_key: String) -> Result<bool, String> {
+    let response = rpc::AddContact{ nickname, onion_id, public_key }.receive().await.expect("Failed to add contact.");
+    Ok(response.success)
+}
+
