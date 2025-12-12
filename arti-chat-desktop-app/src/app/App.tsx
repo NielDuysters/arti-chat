@@ -7,6 +7,7 @@ import { useContacts } from "./hooks/useContacts";
 import Nav from "./components/Nav/Nav";
 import ContactList from "./components/Contacts/ContactList";
 import Welcome from "./screens/Welcome/Welcome";
+import AddContact from "./screens/AddContact/AddContact";
 import ChatWindow from "./components/Chat/ChatWindow";
 
 import "./../styles/globals.scss";
@@ -26,6 +27,8 @@ const App = () => {
                 return <Welcome />
             case "chat":
                 return <ChatWindow activeContact={activeContact} />
+            case "add-contact":
+                return <AddContact />
         }
     }
 
