@@ -33,6 +33,11 @@
     &::placeholder {
       color: #aaa;
     }
+
+    &:disabled {
+      box-shadow: none;
+      padding-left: 0;
+    }
   }
 }
 

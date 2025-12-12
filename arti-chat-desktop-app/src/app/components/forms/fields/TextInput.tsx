@@ -1,4 +1,4 @@
-export default function TextInput({ label, placeholder, value, required, onChange }) {
+export default function TextInput({ label, placeholder, value, required, disabled, onChange }) {
   return (
     <div className="form-field form-field--textinput">
       <label className="form-field__label">{label}{required ? "*" : ""}</label>
@@ -7,6 +7,8 @@ export default function TextInput({ label, placeholder, value, required, onChang
         type="text"
         placeholder={placeholder}
         value={value}
+        required={required}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
       />
     </div>

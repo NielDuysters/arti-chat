@@ -16,7 +16,7 @@ export default function FormField({
 
     switch (config.type) {
         case FieldType.Text:
-            return <TextInput label={config.label} placeholder={config.placeholder} value={value} required={config.required} onChange={handleChange} />;
+            return <TextInput label={config.label} placeholder={config.placeholder} value={value} required={config.required} disabled={config.disabled} onChange={handleChange} />;
         default:
             return null;
     }

@@ -8,6 +8,7 @@ import Nav from "./components/Nav/Nav";
 import ContactList from "./components/Contacts/ContactList";
 import Welcome from "./screens/Welcome/Welcome";
 import AddContact from "./screens/AddContact/AddContact";
+import ContactDetails from "./screens/ContactDetails/ContactDetails";
 import ChatWindow from "./components/Chat/ChatWindow";
 
 import "./../styles/globals.scss";
@@ -26,9 +27,11 @@ const App = () => {
             case "welcome":
                 return <Welcome />
             case "chat":
-                return <ChatWindow activeContact={activeContact} />
+                return <ChatWindow activeContact={activeContact} setView={setView} />
             case "add-contact":
                 return <AddContact />
+            case "contact-details":
+                return <ContactDetails activeContact={activeContact} />
         }
     }
 

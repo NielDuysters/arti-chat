@@ -10,7 +10,7 @@ import ChatInput from "./ChatInput";
 
 import "./ChatWindow.scss";
 
-export default function ChatWindow({ activeContact }) {
+export default function ChatWindow({ activeContact, setView }) {
     const { messages, sendMessage } = useChat(activeContact);
 
     const chatRef = useRef<HTMLDivElement>(null);
@@ -57,6 +57,9 @@ export default function ChatWindow({ activeContact }) {
                     className="chat__top__details"
                     alt="Details"
                     src="/src/assets/dots.png"
+                    onClick={() => {
+                        setView("contact-details");
+                    }}
                 />
             </div>
 

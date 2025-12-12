@@ -13,6 +13,7 @@ export interface FieldConfig {
     type: FieldType;
     placeholder?: string;
     required?: boolean;
+    disabled?: boolean;
 }
 
 export interface FormProps {
@@ -41,7 +42,7 @@ export default function Form({ fields, onSubmit, success, setSuccess }: FormProp
                 <FormField
                 key={f.name}
                 config={f}
-                value={values[f.name] ?? ""}
+                value={values[f.name] ?? f.value}
                 onChange={updateValue}
                 />
             ))}
