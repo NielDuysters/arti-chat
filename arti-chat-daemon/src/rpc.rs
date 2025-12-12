@@ -15,6 +15,9 @@ pub enum RpcCommand {
 
     /// Send message.
     SendMessage { to: String, text: String },
+
+    /// Add contact.
+    AddContact { nickname: String, onion_id: String, public_key: String },
 }
 
 /// LoadContacts response.
@@ -32,6 +35,14 @@ pub struct LoadChatResponse {
     pub messages: Vec<serde_json::Value>,
 }
 impl SendRpcReply for LoadChatResponse {}
+
+/// AddContact response.
+#[derive(serde::Serialize)]
+pub struct AddContactResponse {
+    /// Success status.
+    pub success: bool,
+}
+impl SendRpcReply for AddContactResponse {}
 
 /// Trait to define default behavior to send RPC reply.
 #[async_trait]
@@ -60,6 +71,8 @@ impl RpcCommand {
                 self.handle_load_chat(onion_id, &tx_rpc, client.db_conn.clone()).await,
             RpcCommand::SendMessage { to, text } => 
                 self.handle_send_message(to, text, &tx_broadcast, client).await,
+            RpcCommand::AddContact { nickname, onion_id, public_key } =>
+                self.handle_add_contact(nickname, onion_id, public_key, &tx_rpc, client.db_conn.clone()).await,
         }
     }
 
@@ -135,6 +148,27 @@ impl RpcCommand {
         }
 
         Ok(())
+    }
+
+    async fn handle_add_contact(
+        &self,
+        nickname: &str,
+        onion_id: &str,
+        public_key: &str,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        db_conn: db::DatabaseConnection,
+    ) -> Result<(), RpcError> {
+        let success = db::ContactDb {
+            onion_id: onion_id.into(),
+            nickname: nickname.into(),
+            public_key: public_key.into(),
+            last_message_at: 0,
+            last_viewed_at: 0,
+        }.insert(db_conn.clone()).await.is_ok();
+
+        AddContactResponse {
+            success,
+        }.send_rpc_reply(tx)
     }
 }
 
