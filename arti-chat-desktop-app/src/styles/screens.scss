@@ -1,3 +1,14 @@
 .screen:not(.screen--chat) {
   padding: 50px;
+  height: 100vh;
+  overflow-y: scroll;
+
+  h2 {
+    margin-bottom: 50px;
+  }
+
+  h3:not(:nth-of-type(1)) {
+    margin-top: 50px;
+    display: block;
+  }
 }

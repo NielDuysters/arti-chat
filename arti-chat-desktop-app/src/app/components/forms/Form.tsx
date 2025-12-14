@@ -55,14 +55,14 @@ export default function Form({ fields, onSubmit, success, setSuccess }: FormProp
                     <img
                         className="form__submit-btn__status"
                         alt="Success"
-                        src="/src/assets/form-success.png"
+                        src="/src/assets/button-success.png"
                     />
                 }
                 {success === false &&
                     <img
                         className="form__submit-btn__status"
                         alt="Failed"
-                        src="/src/assets/form-failed.png"
+                        src="/src/assets/button-failed.png"
                     />
                 }
                 Submit

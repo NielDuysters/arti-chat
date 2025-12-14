@@ -52,10 +52,24 @@ export function useContacts() {
         [loadContacts]
     );
 
+    // Delete messages of contact.
+    const deleteContactMessages = useCallback(
+        async (onion_id): boolean => {
+            let response = await invoke("delete_contact_messages", {
+                onionId: onion_id,
+            });
+
+            return response;
+        },
+        [loadContacts]
+
+    );
+
     return {
         contacts,
         addContact,
         updateContact,
+        deleteContactMessages,
     };
 }
 

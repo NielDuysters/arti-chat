@@ -1,0 +1,41 @@
+.action {
+  display: block;
+  padding: 15px;
+  background: var(--bg-dark);
+  border-radius: 15px;
+
+  &__label {
+    font-weight: 700;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__button {
+    padding: 10px 16px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: background 0.15s ease, transform 0.1s ease;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+
+    &__image {
+      width: 15px;
+    }
+
+    &--delete {
+      background: var(--error-color-primary);
+    }
+  }
+}
