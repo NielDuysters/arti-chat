@@ -26,7 +26,10 @@ pub enum RpcCommand {
     LoadUser,
 
     /// Update user.
-    UpdateUser { public_key: Option<String>, private_key: Option<String>, }
+    UpdateUser { public_key: Option<String>, private_key: Option<String>, },
+
+    /// Delete messages with a contact.
+    DeleteContactMessages { onion_id: String },
 }
 
 /// LoadContacts response.
@@ -101,7 +104,9 @@ impl RpcCommand {
                     private_key.as_deref(),
                     &tx_rpc,
                     client.db_conn.clone()
-            ).await,
+                ).await,
+            RpcCommand::DeleteContactMessages { onion_id } =>
+                self.handle_delete_contact_messages(onion_id, &tx_rpc, client.db_conn.clone()).await,
         }
     }
 
@@ -247,6 +252,18 @@ impl RpcCommand {
             private_key: private_key.map(|n| n.to_string()),
         }.update(db_conn.clone()).await.is_ok();
 
+        SuccessResponse {
+            success,
+        }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_delete_contact_messages(
+        &self,
+        onion_id: &str,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        db_conn: db::DatabaseConnection,
+    ) -> Result<(), RpcError> {
+        let success = db::MessageDb::delete(onion_id, db_conn.clone()).await.is_ok();
         SuccessResponse {
             success,
         }.send_rpc_reply(tx)

@@ -418,6 +418,22 @@ pub trait DbModel : Sized {
 
         Ok(results)
     }
+
+    /// Default delete behavior.
+    async fn delete(
+        onion_id: &str,
+        conn: DatabaseConnection,
+    ) -> Result<(), error::DatabaseError> {
+        let conn = conn.lock().await;
+        let mut stmt = conn.prepare(
+            "DELETE FROM MESSAGE
+             WHERE
+                contact_onion_id = ?"
+        )?;
+        stmt.execute(params![onion_id])?;
+
+        Ok(())
+    }
 }
 
 /// Public trait with default behavior to update a model.
