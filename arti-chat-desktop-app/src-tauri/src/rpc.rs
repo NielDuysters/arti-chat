@@ -90,6 +90,15 @@ pub struct UpdateUser {
 impl SendRpcCommand for UpdateUser {}
 impl ReceiveRpcReply<SuccessResponse> for UpdateUser {} 
 
+/// --- Delete contact messages ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct DeleteContactMessages {
+    pub onion_id: String,
+}
+
+impl SendRpcCommand for DeleteContactMessages {}
+impl ReceiveRpcReply<SuccessResponse> for DeleteContactMessages {} 
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {
