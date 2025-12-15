@@ -38,12 +38,15 @@ const App = () => {
                 return <AddContact
                             contacts={contacts}
                             setContacts={setContacts}
+                            setActiveContact={setActiveContact}
+                            setView={setView}
                         />
             case "contact-details":
                 return <ContactDetails
                             activeContact={activeContact}
                             contacts={contacts}
                             setContacts={setContacts}
+                            setView={setView}
                         />
             case "user-details":
                 return <UserDetails />

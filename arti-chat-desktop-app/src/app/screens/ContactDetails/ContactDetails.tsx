@@ -1,4 +1,4 @@
-import { useState} from "react";
+import { useState, useEffect } from "react";
 
 import Form from "../../components/forms/Form";
 import { Contact } from "../../hooks/useContacts";
@@ -7,11 +7,22 @@ import { useContacts } from "../../hooks/useContacts";
 import Action from "../../components/Action/Action";
 import { ActionType } from "../../components/Action/ActionType";
 
-export default function ContactDetails({activeContact, contacts, setContacts})  {
+export default function ContactDetails({activeContact, contacts, setContacts, setView})  {
     const { updateContact, deleteContactMessages, deleteContact } = useContacts({contacts: contacts, setContacts: setContacts});
     const [addContactSuccess, setAddContactSuccess] = useState<boolean | null>(null);
     const [deleteContactMessagesSuccess, setDeleteContactMessagesSuccess] = useState<boolean | null>(null);
     const [deleteContactSuccess, setDeleteContactSuccess] = useState<boolean | null>(null);
+    
+    useEffect(() => {
+        if (deleteContactSuccess === true) {
+            // Small delay to show status icon in submit button.
+            const timer = setTimeout(() => {
+                setView("welcome");
+            }, 750);
+
+            return () => clearTimeout(timer);
+        }
+    }, [deleteContactSuccess, setView]);
 
     return (
         <div className="screen screen--contact-details">
