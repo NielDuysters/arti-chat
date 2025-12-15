@@ -122,7 +122,7 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
-        let contacts = db::ContactDb::retrieve_all(None, None, db_conn.clone()).await?;
+        let contacts = db::ContactDb::retrieve_all(Some("last_viewed_at"), None, db_conn.clone()).await?;
 
         LoadContactsResponse {
             contacts: contacts
@@ -203,7 +203,7 @@ impl RpcCommand {
             nickname: nickname.into(),
             public_key: public_key.into(),
             last_message_at: 0,
-            last_viewed_at: 0,
+            last_viewed_at: chrono::Utc::now().timestamp() as i32,
         }.insert(db_conn.clone()).await.is_ok();
 
         SuccessResponse {
