@@ -5,8 +5,8 @@ import Form from "../../components/forms/Form";
 import { addContactForm } from "../../formDefinitions/addContactForm";
 import { useContacts } from "../../hooks/useContacts";
 
-export default function AddContact()  {
-    const { addContact } = useContacts();
+export default function AddContact({contacts: contacts, setContacts: setContacts})  {
+    const { addContact } = useContacts({contacts: contacts, setContacts: setContacts});
     const [success, setSuccess] = useState<boolean | null>(null);
 
     return (

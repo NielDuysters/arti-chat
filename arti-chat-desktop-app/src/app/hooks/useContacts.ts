@@ -7,14 +7,9 @@ export interface Contact {
     public_key: string;
 }
 
-export function useContacts() {
-    const [contacts, setContacts] = useState<Contact[]>([]);
+export function useContacts({contacts, setContacts}) {
 
-    // Load contacts once on mount.
-    useEffect(() => {
-        loadContacts();
-    }, []);
-
+    // Load contact list.
     const loadContacts = useCallback(async () => {
         const list = await invoke<Contact[]>("load_contacts");
         setContacts(list);
@@ -61,15 +56,30 @@ export function useContacts() {
 
             return response;
         },
-        [loadContacts]
+        []
+    );
+    
+    // Delete contact.
+    const deleteContact = useCallback(
+        async (onion_id): boolean => {
+            let response = await invoke("delete_contact", {
+                onionId: onion_id,
+            });
 
+            await loadContacts();
+
+            return response;
+        },
+        [loadContacts]
     );
 
     return {
+        loadContacts,
         contacts,
         addContact,
         updateContact,
         deleteContactMessages,
+        deleteContact,
     };
 }
 

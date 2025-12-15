@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import reactLogo from "./../assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 
-import { useContacts } from "./hooks/useContacts";
+import { Contact, useContacts } from "./hooks/useContacts";
 
 import Nav from "./components/Nav/Nav";
 import ContactList from "./components/Contacts/ContactList";
@@ -19,9 +19,14 @@ import "./../App.scss";
 const App = () => {
     const [view, setView] = useState("welcome");
     const [activeContact, setActiveContact] = useState(null);
+    const [contacts, setContacts] = useState<Contact[]>([]);
+   
+    const { loadContacts } = useContacts({contacts: contacts, setContacts: setContacts});
 
-    // Load contacts on startup.
-    const { contacts } = useContacts();
+    // Load contacts once on mount.
+    useEffect(() => {
+        loadContacts();
+    }, []);
 
     const renderView = () => {
         switch (view) {
@@ -30,9 +35,16 @@ const App = () => {
             case "chat":
                 return <ChatWindow activeContact={activeContact} setView={setView} />
             case "add-contact":
-                return <AddContact />
+                return <AddContact
+                            contacts={contacts}
+                            setContacts={setContacts}
+                        />
             case "contact-details":
-                return <ContactDetails activeContact={activeContact} />
+                return <ContactDetails
+                            activeContact={activeContact}
+                            contacts={contacts}
+                            setContacts={setContacts}
+                        />
             case "user-details":
                 return <UserDetails />
         }

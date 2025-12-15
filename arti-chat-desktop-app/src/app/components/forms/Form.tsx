@@ -42,7 +42,7 @@ export default function Form({ fields, onSubmit, success, setSuccess }: FormProp
                 <FormField
                 key={f.name}
                 config={f}
-                value={values[f.name] ?? f.value}
+                value={values[f.name] ?? f.value ?? ""}
                 onChange={updateValue}
                 />
             ))}

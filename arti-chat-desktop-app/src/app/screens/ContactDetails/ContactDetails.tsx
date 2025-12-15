@@ -7,10 +7,11 @@ import { useContacts } from "../../hooks/useContacts";
 import Action from "../../components/Action/Action";
 import { ActionType } from "../../components/Action/ActionType";
 
-export default function ContactDetails({activeContact} : {activeContact: Contact} )  {
-    const { updateContact, deleteContactMessages } = useContacts();
+export default function ContactDetails({activeContact, contacts, setContacts})  {
+    const { updateContact, deleteContactMessages, deleteContact } = useContacts({contacts: contacts, setContacts: setContacts});
     const [addContactSuccess, setAddContactSuccess] = useState<boolean | null>(null);
     const [deleteContactMessagesSuccess, setDeleteContactMessagesSuccess] = useState<boolean | null>(null);
+    const [deleteContactSuccess, setDeleteContactSuccess] = useState<boolean | null>(null);
 
     return (
         <div className="screen screen--contact-details">
@@ -39,6 +40,17 @@ export default function ContactDetails({activeContact} : {activeContact: Contact
                     setDeleteContactMessagesSuccess(success);
                 }}
                 success={deleteContactMessagesSuccess}
+            />
+            
+            <Action
+                label="Delete contact"
+                description="Delete this contact and all messages."
+                actionType={ActionType.Delete}
+                onClick={async () => {
+                    const success = await deleteContact(activeContact.onion_id);
+                    setDeleteContactSuccess(success);
+                }}
+                success={deleteContactSuccess}
             />
 
         </div>
