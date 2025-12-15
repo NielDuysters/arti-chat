@@ -51,3 +51,9 @@ pub async fn delete_contact_messages(onion_id: String) -> Result<bool, String> {
     Ok(response.success)
 }
 
+#[tauri::command]
+pub async fn delete_contact(onion_id: String) -> Result<bool, String> {
+    let response = rpc::DeleteContact{ onion_id }.receive().await.expect("Failed to delete contact.");
+    Ok(response.success)
+}
+
