@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 export interface Message {
+    id: number;
     body: string;
     timestamp: number;
     is_incoming: boolean;
@@ -37,9 +38,11 @@ export function useChat({activeContact, loadContacts}) {
         }
 
         // Push to chat to avoid slow UI.
+        const latestPreviousMessage = messages.at(-1);
         setMessages((prev) => [
             ...prev,
             {
+                id: latestPreviousMessage ? latestPreviousMessage.id + 1 : 1,
                 body: text,
                 timestamp: Date.now(),
                 is_incoming: false,

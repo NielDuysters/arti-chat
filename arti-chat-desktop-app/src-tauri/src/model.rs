@@ -12,6 +12,7 @@ pub struct Contact {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Message {
+    pub id: i64,
     pub contact_onion_id: String,
     pub body: String,
     pub timestamp: i32,

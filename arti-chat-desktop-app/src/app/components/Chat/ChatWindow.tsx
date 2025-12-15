@@ -71,7 +71,7 @@ export default function ChatWindow({ activeContact, loadContacts, setView }) {
                 {messages.length === 0 && <p>No messages yet.</p>}
 
                 {messages.map((msg) => (
-                    <Message key={msg.timestamp} message={msg} />
+                    <Message key={msg.id} message={msg} />
                 ))}
             </div>
 
