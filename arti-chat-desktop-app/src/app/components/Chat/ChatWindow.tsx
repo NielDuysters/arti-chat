@@ -10,8 +10,8 @@ import ChatInput from "./ChatInput";
 
 import "./ChatWindow.scss";
 
-export default function ChatWindow({ activeContact, setView }) {
-    const { messages, sendMessage } = useChat(activeContact);
+export default function ChatWindow({ activeContact, loadContacts, setView }) {
+    const { messages, sendMessage } = useChat({activeContact: activeContact, loadContacts: loadContacts});
 
     const chatRef = useRef<HTMLDivElement>(null);
     const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);

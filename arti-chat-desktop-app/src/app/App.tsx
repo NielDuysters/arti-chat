@@ -33,7 +33,11 @@ const App = () => {
             case "welcome":
                 return <Welcome />
             case "chat":
-                return <ChatWindow activeContact={activeContact} setView={setView} />
+                return <ChatWindow
+                            activeContact={activeContact}
+                            loadContacts={loadContacts}
+                            setView={setView}
+                        />
             case "add-contact":
                 return <AddContact
                             contacts={contacts}

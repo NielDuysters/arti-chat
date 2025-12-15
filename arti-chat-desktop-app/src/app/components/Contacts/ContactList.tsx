@@ -23,6 +23,7 @@ export default function ContactList({contacts, setActiveContact, setView}) {
                 key={c.onion_id}
                 contact={c}
                 onClick={() => {
+                    c.amount_unread_messages = 0;
                     setActiveContact(c);
                     setView('chat');
                 }}

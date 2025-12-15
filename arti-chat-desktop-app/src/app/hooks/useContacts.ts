@@ -5,14 +5,16 @@ export interface Contact {
     onion_id: string;
     nickname: string;
     public_key: string;
+    amount_unread_messages: number;
+    last_viewed_at: number;
 }
 
 export function useContacts({contacts, setContacts}) {
 
     // Load contact list.
     const loadContacts = useCallback(async () => {
-        const list = await invoke<Contact[]>("load_contacts");
-        setContacts(list);
+        const contacts = await invoke<Contact[]>("load_contacts");
+        setContacts(contacts);
     }, []);
 
     // Add a new contact.

@@ -10,7 +10,7 @@ export interface Message {
     verified_status: boolean;
 }
 
-export function useChat(activeContact) {
+export function useChat({activeContact, loadContacts}) {
     const [messages, setMessages] = useState<Message[]>([]);
 
     // Load chat.
@@ -59,17 +59,10 @@ export function useChat(activeContact) {
 
     // Listen for new messages.
     useEffect(() => {
-        if (!activeContact) {
-            return;
-        }
-
         const promise = listen("incoming-message", async (event) => {
             const data = JSON.parse(event.payload);
-            if (data.onion_id !== activeContact.onion_id) {
-                return;
-            }
-
             await loadChat();
+            await loadContacts();
         });
 
         return () => {
