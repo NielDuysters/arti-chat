@@ -98,6 +98,10 @@ pub enum DatabaseError {
     /// Invalid primary key type.
     #[error("Invalid primary key type.")]
     InvalidPrimaryKeyType,
+    
+    /// Error with OS keyring.
+    #[error("Keyring error: {0}")]
+    KeyringError(#[from] keyring::Error),
 }
 
 /// Errors related to IPC server.

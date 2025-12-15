@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use crate::error;
+use rand::RngCore;
 use rusqlite::{Connection, params, Row, ToSql};
 use tokio::sync::Mutex as TokioMutex;
 
@@ -38,8 +39,11 @@ impl InsertId {
 pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection, error::DatabaseError> {
     let conn = Connection::open(database_path(project_dir)?)?;
 
+    let db_key = retrieve_db_encryption_key()?; 
+    conn.pragma_update(None, "key", &db_key)?;
     conn.execute_batch(
         r#"
+        PRAGMA cipher_memory_security = ON;
         PRAGMA foreign_keys = ON;
 
         CREATE TABLE IF NOT EXISTS user (
@@ -554,3 +558,21 @@ fn database_path(project_dir: std::path::PathBuf) -> Result<std::path::PathBuf, 
     let path = project_dir.join("arti-chat.db");
     Ok(path)
 }
+
+// Store/retrieve key for database encryption in OS keychain.
+fn retrieve_db_encryption_key() -> Result<String, error::DatabaseError> {
+    let entry = keyring::Entry::new("com.arti-chat.desktop", "db-key")?;
+    match entry.get_password() {
+        Ok(key) => Ok(key),
+        Err(_) => {
+            // Generate new key.
+            let mut bytes = [0u8; 32];
+            rand::rng().fill_bytes(&mut bytes);
+            let key = hex::encode(bytes);
+
+            entry.set_password(&key)?;
+            Ok(key)
+        }
+    }
+}
+
