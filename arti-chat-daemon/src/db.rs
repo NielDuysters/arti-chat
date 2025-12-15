@@ -40,6 +40,8 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
 
     conn.execute_batch(
         r#"
+        PRAGMA foreign_keys = ON;
+
         CREATE TABLE IF NOT EXISTS user (
             onion_id TEXT PRIMARY KEY,
             nickname TEXT NOT NULL,
@@ -63,7 +65,11 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
             is_incoming INTEGER NOT NULL,
             sent_status INTEGER NOT NULL DEFAULT 0,
             verified_status INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (contact_onion_id) REFERENCES contact(onion_id)
+            FOREIGN KEY 
+                (contact_onion_id)
+            REFERENCES
+                contact(onion_id)
+            ON DELETE CASCADE
         );
         "#,
     )?;
@@ -108,6 +114,8 @@ impl DbModel for UserDb {
     fn table() -> &'static str { "user" }
     
     fn primary_key(&self) -> PrimaryKey { PrimaryKey::Provided(&self.onion_id) }
+
+    fn delete_by() -> &'static str { "onion_id" }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -179,6 +187,8 @@ impl DbModel for ContactDb {
     fn table() -> &'static str { "contact" }
 
     fn primary_key(&self) -> PrimaryKey { PrimaryKey::Provided(&self.onion_id) }
+    
+    fn delete_by() -> &'static str { "onion_id" }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -255,6 +265,8 @@ impl DbModel for MessageDb {
     fn table() -> &'static str { "message" }
     
     fn primary_key(&self) -> PrimaryKey { PrimaryKey::AutoIncrement }
+    
+    fn delete_by() -> &'static str { "contact_onion_id" }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -358,6 +370,9 @@ pub trait DbModel : Sized {
     /// Primary key can be known or is autoincrement.
     fn primary_key(&self) -> PrimaryKey;
 
+    /// Column used to delete rows.
+    fn delete_by() -> &'static str;
+
     /// List of (column -> values) for INSERT (..column) VALUES (..values).
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)>;
 
@@ -425,11 +440,8 @@ pub trait DbModel : Sized {
         conn: DatabaseConnection,
     ) -> Result<(), error::DatabaseError> {
         let conn = conn.lock().await;
-        let mut stmt = conn.prepare(
-            "DELETE FROM MESSAGE
-             WHERE
-                contact_onion_id = ?"
-        )?;
+        let sql = format!("DELETE FROM {} WHERE {} = ?", Self::table(), Self::delete_by());
+        let mut stmt = conn.prepare(&sql)?;
         stmt.execute(params![onion_id])?;
 
         Ok(())
