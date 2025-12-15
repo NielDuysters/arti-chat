@@ -7,6 +7,7 @@ pub struct Contact {
     pub public_key: String,
     pub last_message_at: i32,
     pub last_viewed_at: i32,
+    pub amount_unread_messages: i32,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
