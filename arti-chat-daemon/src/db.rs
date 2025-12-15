@@ -53,7 +53,6 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
             onion_id TEXT PRIMARY KEY,
             nickname TEXT NOT NULL,
             public_key TEXT NOT NULL,
-            last_message_at INTEGER,
             last_viewed_at INTEGER DEFAULT 0
         );
 
@@ -152,7 +151,7 @@ impl DbUpdateModel<UserDb> for UpdateUserDb {
 // --- Contact ---
 
 /// Represents row in contact table.
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Debug)]
 pub struct ContactDb {
     /// Column onion_id.
     pub onion_id: String,
@@ -163,11 +162,14 @@ pub struct ContactDb {
     /// Column public_key.
     pub public_key: String,
 
-    /// Column last_message_at.
+    /// Computed field showing timestamp of last message with this contact..
     pub last_message_at: i32,
     
     /// Column last_viewed_at.
     pub last_viewed_at: i32,
+
+    /// Computed field containing amount of unread messages from this contact.
+    pub amount_unread_messages: i64,
 }
 
 /// Type allowing to update a contact.
@@ -183,6 +185,55 @@ pub struct UpdateContactDb {
     pub public_key: Option<String>,
 }
 
+impl ContactDb {
+    /// Retrieve all contacts with unread count in ONE query.
+    pub async fn retrieve_all(
+        order_column: Option<&str>,
+        desc: Option<bool>,
+        conn: DatabaseConnection,
+    ) -> Result<Vec<Self>, error::DatabaseError> {
+        let conn = conn.lock().await;
+        let order = order_column.unwrap_or("last_message_at");
+        let direction = if desc.unwrap_or(true) { "DESC" } else { "ASC" };
+        let sql = format!(
+            r#"
+            SELECT
+                contact.onion_id,
+                contact.nickname,
+                contact.public_key,
+                COALESCE(MAX(message.timestamp), 0) AS last_message_at,
+                contact.last_viewed_at,
+                COUNT(message.id) AS amount_unread_messages
+            FROM
+                contact
+            LEFT JOIN
+                message
+            ON
+                message.contact_onion_id = contact.onion_id
+                AND message.is_incoming = 1
+                AND message.timestamp > contact.last_viewed_at
+            GROUP BY
+                contact.onion_id
+            ORDER BY
+                {} {}
+            "#,
+            order,
+            direction
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map([], |row| Ok(Self::from_row(row)?))?;
+
+        let mut results = Vec::new();
+        for row in rows {
+            results.push(row?);
+        }
+
+        Ok(results)
+    }
+}
+
+
 impl DbModel for ContactDb {
     fn table() -> &'static str { "contact" }
 
@@ -195,7 +246,6 @@ impl DbModel for ContactDb {
             ("onion_id", &self.onion_id),
             ("nickname", &self.nickname),
             ("public_key", &self.public_key),
-            ("last_message_at", &self.last_message_at),
             ("last_viewed_at", &self.last_viewed_at),
         ]
     }
@@ -205,8 +255,9 @@ impl DbModel for ContactDb {
             onion_id: row.get("onion_id")?,
             nickname: row.get("nickname")?,
             public_key: row.get("public_key")?,
-            last_message_at: row.get("last_message_at")?,
+            last_message_at: row.get("last_message_at").unwrap_or(0),
             last_viewed_at: row.get("last_viewed_at")?,
+            amount_unread_messages: row.get("amount_unread_messages").unwrap_or(0),
         })
     }
 }
@@ -311,6 +362,10 @@ impl MessageDb {
         conn: DatabaseConnection
     ) -> Result<Vec<Self>, error::DatabaseError>  {
         let conn = conn.lock().await;
+       
+        let ts = chrono::Utc::now().timestamp();
+        let mut stmt = conn.prepare("UPDATE contact SET last_viewed_at = ? WHERE onion_id = ?")?;
+        stmt.execute(params![ts, onion_id])?;
 
         let mut stmt = conn.prepare(
             "SELECT * FROM MESSAGE

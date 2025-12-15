@@ -122,7 +122,7 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
-        let contacts = db::ContactDb::retrieve_all(Some("last_viewed_at"), None, db_conn.clone()).await?;
+        let contacts = db::ContactDb::retrieve_all(Some("last_message_at"), None, db_conn.clone()).await?;
 
         LoadContactsResponse {
             contacts: contacts
@@ -170,6 +170,7 @@ impl RpcCommand {
 
         // Send message to peer.
         if let Ok(_) = client.send_message_to_peer(to, text).await {
+            // Update sent status.
             db::UpdateMessageDb {
                 id: message_id.expect_i64()?,
                 sent_status: Some(true),
@@ -204,6 +205,7 @@ impl RpcCommand {
             public_key: public_key.into(),
             last_message_at: 0,
             last_viewed_at: chrono::Utc::now().timestamp() as i32,
+            amount_unread_messages: 0,
         }.insert(db_conn.clone()).await.is_ok();
 
         SuccessResponse {
