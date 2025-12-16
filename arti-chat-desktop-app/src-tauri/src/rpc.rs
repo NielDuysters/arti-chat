@@ -108,6 +108,14 @@ pub struct DeleteContact {
 impl SendRpcCommand for DeleteContact {}
 impl ReceiveRpcReply<SuccessResponse> for DeleteContact {} 
 
+/// --- Reset Tor circuit ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct ResetTorCircuit {}
+
+impl SendRpcCommand for ResetTorCircuit {}
+impl ReceiveRpcReply<SuccessResponse> for ResetTorCircuit {} 
+
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {

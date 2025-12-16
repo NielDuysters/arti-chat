@@ -57,3 +57,9 @@ pub async fn delete_contact(onion_id: String) -> Result<bool, String> {
     Ok(response.success)
 }
 
+#[tauri::command]
+pub async fn reset_tor_circuit() -> Result<bool, String> {
+    let response = rpc::ResetTorCircuit{}.receive().await.expect("Failed to reset Tor circuit.");
+    Ok(response.success)
+}
+

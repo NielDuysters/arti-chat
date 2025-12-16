@@ -43,6 +43,7 @@ pub fn run() {
             commands::update_user,
             commands::delete_contact_messages,
             commands::delete_contact,
+            commands::reset_tor_circuit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
