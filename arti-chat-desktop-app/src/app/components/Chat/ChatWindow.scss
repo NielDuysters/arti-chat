@@ -41,7 +41,7 @@
 
 .chat__messages {
   width: 100%;
-  height: calc(100vh - 125px);
+  height: calc(100vh - 100px - 75px);
   padding: 25px 50px;
   box-sizing: border-box;
   overflow-y: scroll;

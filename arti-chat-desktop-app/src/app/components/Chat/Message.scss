@@ -42,6 +42,12 @@
     }
   }
 
+  &__body {
+    white-space: pre-wrap;
+    padding-bottom: 10px;
+    display: block;
+  }
+
   &__info {
     position: absolute;
     right: 7px;
