@@ -13,7 +13,12 @@ export default function Nav({setView}) {
                 <img src="/src/assets/me.png" alt="ME" />
             </div>
 
-            <div className="nav__item" data-screen="settings">
+            <div
+                className="nav__item"
+                onClick={() => {
+                    setView("settings");
+                }}
+            >
                 <img src="/src/assets/settings.png" alt="Settings" />
             </div>
 

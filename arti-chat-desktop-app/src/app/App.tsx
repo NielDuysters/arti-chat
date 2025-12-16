@@ -10,6 +10,7 @@ import Welcome from "./screens/Welcome/Welcome";
 import AddContact from "./screens/AddContact/AddContact";
 import ContactDetails from "./screens/ContactDetails/ContactDetails";
 import UserDetails from "./screens/UserDetails/UserDetails";
+import Settings from "./screens/Settings/Settings";
 import ChatWindow from "./components/Chat/ChatWindow";
 
 import "./../styles/globals.scss";
@@ -54,6 +55,8 @@ const App = () => {
                         />
             case "user-details":
                 return <UserDetails />
+            case "settings":
+                return <Settings />
         }
     }
 
