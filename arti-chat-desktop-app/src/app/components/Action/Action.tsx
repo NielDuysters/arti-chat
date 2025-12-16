@@ -3,12 +3,31 @@ import { ActionType } from "./ActionType";
 import "./Action.scss";
 
 export default function Action({label, description, actionType, onClick, success}) {
-    
-    const renderButton = (actionType, onClick) => {
+   
+    const successIcon = (success) => {
+        if (success === false) {
+            return (
+                <img
+                    className="form__submit-btn__status"
+                    alt="Failed"
+                    src="/src/assets/button-failed.png"
+                />
+            );
+        }
 
+        return (
+            <img
+                className="form__submit-btn__status"
+                alt="Success"
+                src="/src/assets/button-success.png"
+            />
+        );
+    }
+
+    const renderButton = (actionType, onClick) => {
         switch (actionType) {
             case ActionType.Delete:
-                const buttonImage = (success) => {
+                var buttonImage = (success) => {
                     if (success === null) {
                         return (
                             <img
@@ -18,23 +37,7 @@ export default function Action({label, description, actionType, onClick, success
                         )
                     }
 
-                    if (success === false) {
-                        return (
-                            <img
-                                className="form__submit-btn__status"
-                                alt="Failed"
-                                src="/src/assets/button-failed.png"
-                            />
-                        );
-                    }
-
-                    return (
-                        <img
-                            className="form__submit-btn__status"
-                            alt="Success"
-                            src="/src/assets/button-success.png"
-                        />
-                    );
+                    return successIcon(success);
                 };
 
                 return (
@@ -44,6 +47,29 @@ export default function Action({label, description, actionType, onClick, success
                     >
                         { buttonImage(success) }
                         Delete
+                    </button>
+                )
+            case ActionType.Reset:
+                var buttonImage = (success) => {
+                    if (success === null) {
+                        return (
+                            <img
+                                className="action__button__image"
+                                src="/src/assets/reset.png"
+                            />
+                        )
+                    }
+
+                    return successIcon(success);
+                };
+
+                return (
+                    <button
+                        className="action__button action__button--reset"
+                        onClick={onClick}
+                    >
+                        { buttonImage(success) }
+                        Reset
                     </button>
                 )
         }

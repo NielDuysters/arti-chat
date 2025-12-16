@@ -14,7 +14,7 @@ export default function Settings()  {
             <Action
                 label="Reset Tor circuit"
                 description="Make Tor client use new circuit to solve unstable connection."
-                actionType={ActionType.Delete}
+                actionType={ActionType.Reset}
                 onClick={async () => {
                     const success = await resetTorCircuit();
                     setSuccess(success);

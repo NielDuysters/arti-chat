@@ -38,5 +38,10 @@
     &--delete {
       background: var(--error-color-primary);
     }
+    
+    &--reset {
+      background: var(--warning-color-primary);
+      color: var(--text-dark);
+    }
   }
 }
