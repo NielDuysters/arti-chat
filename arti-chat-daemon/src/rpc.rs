@@ -33,6 +33,9 @@ pub enum RpcCommand {
 
     /// Delete contact.
     DeleteContact { onion_id: String },
+
+    /// Reset Tor circuit.
+    ResetTorCircuit,
 }
 
 /// LoadContacts response.
@@ -93,7 +96,7 @@ impl RpcCommand {
             RpcCommand::LoadChat { onion_id } =>
                 self.handle_load_chat(onion_id, &tx_rpc, client.db_conn.clone()).await,
             RpcCommand::SendMessage { to, text } => 
-                self.handle_send_message(to, text, &tx_broadcast, client).await,
+                self.handle_send_message(to, text, &tx_broadcast, &client).await,
             RpcCommand::AddContact { nickname, onion_id, public_key } =>
                 self.handle_add_contact(nickname, onion_id, public_key, &tx_rpc, client.db_conn.clone()).await,
             RpcCommand::UpdateContact { onion_id, nickname, public_key } =>
@@ -112,6 +115,8 @@ impl RpcCommand {
                 self.handle_delete_contact_messages(onion_id, &tx_rpc, client.db_conn.clone()).await,
             RpcCommand::DeleteContact { onion_id } =>
                 self.handle_delete_contact(onion_id, &tx_rpc, client.db_conn.clone()).await,
+            RpcCommand::ResetTorCircuit => 
+                self.handle_reset_tor_circuit(client, &tx_rpc).await,
         }
     }
 
@@ -283,6 +288,17 @@ impl RpcCommand {
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
         let success = db::ContactDb::delete(onion_id, db_conn.clone()).await.is_ok();
+        SuccessResponse {
+            success,
+        }.send_rpc_reply(tx)
+    }
+
+    async fn handle_reset_tor_circuit(
+        &self,
+        client: &client::Client,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+    ) -> Result<(), RpcError> {
+        let success = client.reset_tor_circuit().await.is_ok();
         SuccessResponse {
             success,
         }.send_rpc_reply(tx)

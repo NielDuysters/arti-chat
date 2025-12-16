@@ -17,7 +17,7 @@ type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>;
 /// Encapsulates hidden service, database connection,...
 pub struct Client {
     /// Arti Tor Client.
-    pub tor_client: ArtiTorClient,
+    pub tor_client: TokioMutex<ArtiTorClient>,
 
     /// Database connection.
     pub db_conn: DatabaseConnection,
@@ -67,7 +67,7 @@ impl Client {
 
         tracing::info!("ArtiChat client launched.");
         Ok(Self {
-            tor_client,
+            tor_client: TokioMutex::new(tor_client),
             db_conn,
             onion_service,
             request_stream,
@@ -101,7 +101,8 @@ impl Client {
     ) -> Result<(), error::ClientError> {
         // Open stream to peer.
         let target = format!("{}:80", to_onion_id);
-        let mut stream = self.tor_client.connect(&target).await?;
+        let tor_client = self.tor_client.lock().await;
+        let mut stream = tor_client.connect(&target).await?;
 
         // Make payload.
         let payload = message::MessagePayload {
@@ -171,6 +172,17 @@ impl Client {
             .onion_address()
             .ok_or(error::ClientError::EmptyHsid)
             .map(|address| safelog::DispUnredacted(address).to_string())
+    }
+
+    /// Reset TorClient to connect over new circuit.
+    pub async fn reset_tor_circuit(&self) -> Result<(), error::ClientError> {
+        let mut prefs = arti_client::StreamPrefs::new();
+        prefs.new_isolation_group();
+        
+        let mut tor_client = self.tor_client.lock().await;
+        *tor_client = tor_client.clone_with_prefs(prefs);
+        
+        Ok(())
     }
 
     async fn bootstrap_tor_client() -> Result<ArtiTorClient, error::ClientError> {
