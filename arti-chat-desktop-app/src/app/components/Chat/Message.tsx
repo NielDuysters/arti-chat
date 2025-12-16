@@ -47,7 +47,10 @@ export default function Message({ message }) {
     }
 
     return (
-        <div className={`message ${message.is_incoming ? "message--incoming" : "message--outgoing"} ${message.optimistic ? "message--optimistic" : ""} ${message.is_incoming && !message.verified_status ? "message--unverified" : ""}`}>
+        <div
+            className={`message ${message.is_incoming ? "message--incoming" : "message--outgoing"} ${message.optimistic ? "message--optimistic" : ""} ${message.is_incoming && !message.verified_status ? "message--unverified" : ""}`}
+            data-timestamp={message.timestamp}
+        >
             {!message.optimistic && message.is_incoming && unverifiedError(message.verified_status)}
             <span className="message__body">{message.body}</span>
             <div className="message__info">

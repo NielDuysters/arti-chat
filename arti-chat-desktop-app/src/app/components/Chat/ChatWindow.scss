@@ -10,7 +10,7 @@
   position: sticky;
   left: 0;
   top: 0;
-  
+
   &__details {
     width: 25px;
   }
@@ -45,4 +45,23 @@
   padding: 25px 50px;
   box-sizing: border-box;
   overflow-y: scroll;
+}
+
+.chat__day-label {
+  position: sticky;
+  top: 0;
+  background: var(--black-subtle);
+  color: var(--text-white);
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 15px;
+  margin: 0 auto;
+  width: fit-content;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  &--visible {
+    opacity: 1;
+  }
 }
