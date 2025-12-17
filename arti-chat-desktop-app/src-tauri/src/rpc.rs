@@ -115,6 +115,13 @@ pub struct ResetTorCircuit {}
 impl SendRpcCommand for ResetTorCircuit {}
 impl ReceiveRpcReply<SuccessResponse> for ResetTorCircuit {} 
 
+/// --- Delete all contacts ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct DeleteAllContacts {}
+
+impl SendRpcCommand for DeleteAllContacts {}
+impl ReceiveRpcReply<SuccessResponse> for DeleteAllContacts {} 
+
 
 /// Trait to send types as RPC command.
 #[async_trait]

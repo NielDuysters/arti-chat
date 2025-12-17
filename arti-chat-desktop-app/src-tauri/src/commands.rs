@@ -63,3 +63,8 @@ pub async fn reset_tor_circuit() -> Result<bool, String> {
     Ok(response.success)
 }
 
+#[tauri::command]
+pub async fn delete_all_contacts() -> Result<bool, String> {
+    let response = rpc::DeleteAllContacts{}.receive().await.expect("Failed to delete all contacts.");
+    Ok(response.success)
+}
