@@ -1,7 +1,17 @@
 import React from "react";
 import "./Nav.scss";
 
-export default function Nav({setView}) {
+export default function Nav({setView, isReachable}) {
+    const statusIndicator = (status) => {
+        if (status === null) {
+            return;
+        }
+
+        return (
+            <div className={`nav__item__status ${status ? "nav__item__status--ok" : "nav__item__status--nok"}`}></div>
+        );
+    }
+
     return (
         <div className="nav">
             <div
@@ -32,7 +42,8 @@ export default function Nav({setView}) {
                     setView("tor-circuit");
                 }}
             >
-                <img src="/src/assets/tor-active.png" alt="Tor" />
+                <img src="/src/assets/tor-circuit.png" alt="Tor" />
+                {statusIndicator(isReachable)}
             </div>
 
             <div className="nav__item" data-screen="faq">

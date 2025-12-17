@@ -23,10 +23,16 @@ export function useClient() {
          });
     }, []);
 
+    // Ping hidden service.
+    const pingHiddenService = useCallback(async () : boolean => {
+         return await invoke("ping_hidden_service");
+    }, []);
+
     return {
         resetTorCircuit,
         getConfigValue,
         setConfigValue,
+        pingHiddenService,
     };
 }
 

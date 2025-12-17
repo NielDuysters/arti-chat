@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { Contact, useContacts } from "./hooks/useContacts";
 import { useChat } from "./hooks/useChat";
+import { useHiddenServicePing } from "./hooks/usePingHiddenService";
 
 import Nav from "./components/Nav/Nav";
 import ContactList from "./components/Contacts/ContactList";
@@ -39,6 +40,8 @@ const App = () => {
         }
     }, [view]);
 
+    const { isReachable } = useHiddenServicePing();
+
     const renderView = () => {
         switch (view) {
             case "welcome":
@@ -71,14 +74,19 @@ const App = () => {
                             setContacts={setContacts}
                         />
             case "tor-circuit":
-                return <TorCircuit />
+                return <TorCircuit
+                            isReachable={isReachable}
+                        />
         }
     }
 
 
     return (
         <main className="container">
-          <Nav setView={setView} />
+          <Nav
+            setView={setView}
+            isReachable={isReachable}
+          />
           <ContactList
             contacts={contacts}
             setActiveContact={setActiveContact}
