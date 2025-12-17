@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "arti-chat-desktop-app",
+        "title": "Arti chat",
         "width": 1150,
         "height": 700
       }
