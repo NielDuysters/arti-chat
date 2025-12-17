@@ -130,6 +130,28 @@ pub struct SendAppFocusState {
 
 impl SendRpcCommand for SendAppFocusState {}
 
+/// --- Get config value ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct GetConfigValue {
+    pub key: String,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct GetConfigValueResponse {
+    pub value: String,
+}
+
+impl SendRpcCommand for GetConfigValue {}
+impl ReceiveRpcReply<GetConfigValueResponse> for GetConfigValue {} 
+
+/// --- Set config value ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SetConfigValue {
+    pub key: String,
+    pub value: String,
+}
+
+impl SendRpcCommand for SetConfigValue {}
 
 /// Trait to send types as RPC command.
 #[async_trait]

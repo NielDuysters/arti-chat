@@ -73,3 +73,15 @@ pub async fn send_focus_state(focussed: bool) -> Result<(), String> {
     let _ = rpc::SendAppFocusState{ focussed }.send().await.expect("Failed to send app focus state.");
     Ok(())
 }
+
+#[tauri::command]
+pub async fn get_config_value(key: String) -> Result<String, String> {
+    let response = rpc::GetConfigValue{ key }.receive().await.expect("Failed to get config value.");
+    Ok(response.value)
+}
+
+#[tauri::command]
+pub async fn set_config_value(key: String, value: String) -> Result<(), String> {
+    let _ = rpc::SetConfigValue{ key, value }.send().await.expect("Failed to set config value.");
+    Ok(())
+}
