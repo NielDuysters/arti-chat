@@ -90,6 +90,27 @@ pub async fn set_config_value(key: String, value: String) -> Result<(), String> 
 pub async fn ping_hidden_service() -> Result<bool, String> {
     match (rpc::PingHiddenService {}.receive().await) {
         Ok(r) => Ok(r.success),
+        Err(e) => Err(format!("ping_hidden_service failed: {e}")),
+    }
+}
+
+#[tauri::command]
+pub async fn ping_daemon() -> Result<bool, String> {
+    match (rpc::PingDaemon {}.receive().await) {
+        Ok(r) => Ok(r.success),
         Err(_) => Ok(false),
     }
+}
+
+#[tauri::command]
+pub async fn restart_daemon() -> Result<(), String> {
+    let _ = std::process::Command::new("pkill")
+        .arg("arti-chat-daemon-bin")
+        .status();
+
+    std::process::Command::new("arti-chat-daemon-bin")
+        .spawn()
+        .map_err(|e| format!("Failed to restart daemon: {e}"))?;
+
+    Ok(())
 }

@@ -83,6 +83,8 @@ pub fn run() {
             commands::get_config_value,
             commands::set_config_value,
             commands::ping_hidden_service,
+            commands::ping_daemon,
+            commands::restart_daemon,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

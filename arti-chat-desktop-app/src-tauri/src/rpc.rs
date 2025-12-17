@@ -160,6 +160,13 @@ pub struct PingHiddenService {}
 impl SendRpcCommand for PingHiddenService {}
 impl ReceiveRpcReply<SuccessResponse> for PingHiddenService {} 
 
+/// --- Ping daemon ---
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct PingDaemon {}
+
+impl SendRpcCommand for PingDaemon {}
+impl ReceiveRpcReply<SuccessResponse> for PingDaemon {} 
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {
