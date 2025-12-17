@@ -14,6 +14,7 @@ use tor_proto::client::stream::IncomingStreamRequest;
 type ArtiTorClient = arti_client::TorClient<tor_rtcompat::PreferredRuntime>;
 type OnionServiceRequestStream = Box<dyn Stream<Item = tor_hsservice::RendRequest> + Send>;
 type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
+type ClientConfigType = std::sync::Arc<TokioMutex<ClientConfig>>; 
 
 /// Encapsulates hidden service, database connection,...
 pub struct Client {
@@ -24,7 +25,7 @@ pub struct Client {
     pub db_conn: DatabaseConnection,
 
     /// Configuration from database.
-    pub config: TokioMutex<ClientConfig>,
+    pub config: ClientConfigType,
 
     /// Running hidden onion service.
     onion_service: std::sync::Arc<tor_hsservice::RunningOnionService>,
@@ -109,7 +110,7 @@ impl Client {
         Ok(Self {
             tor_client: TokioMutex::new(tor_client),
             db_conn: db_conn.clone(),
-            config: TokioMutex::new(ClientConfig::load(db_conn.clone()).await?),
+            config: std::sync::Arc::new(TokioMutex::new(ClientConfig::load(db_conn.clone()).await?)),
             onion_service,
             request_stream,
             private_key,
@@ -126,8 +127,9 @@ impl Client {
         while let Some(request) = requests.next().await {
             let message_tx = message_tx.clone();
             let db_conn = self.db_conn.clone();
+            let client_config = self.config.clone();
             tokio::spawn(async move {
-                let _ = Self::handle_request(request, message_tx, db_conn).await;
+                let _ = Self::handle_request(request, message_tx, db_conn, client_config).await;
             });
         }
 
@@ -310,6 +312,7 @@ impl Client {
         message_tx: tokio::sync::mpsc::UnboundedSender<String>,  // Used to send incoming messages
         // to IPC server.
         db_conn: DatabaseConnection,
+        client_config: ClientConfigType,
     ) -> Result<(), error::ClientError> {
         match request.request() {
             IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
@@ -362,7 +365,8 @@ impl Client {
 
                 // Show notifcation for new message if user
                 // is not actively using the app.
-                if !ui_focus::is_focussed() {
+                let client_config = client_config.lock().await;
+                if client_config.enable_notifications && !ui_focus::is_focussed() {
                     let _ = Notification::new()
                     .summary("Arti chat")
                     .body("You received a new message.")
