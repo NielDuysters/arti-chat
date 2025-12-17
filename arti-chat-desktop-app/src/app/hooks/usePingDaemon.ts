@@ -41,6 +41,7 @@ export function useDaemonPing() {
 
     return {
         daemonIsReachable,
+        setDaemonIsReachable,
     };
 }
 

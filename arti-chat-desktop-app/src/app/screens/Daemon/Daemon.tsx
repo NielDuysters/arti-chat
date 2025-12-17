@@ -4,7 +4,7 @@ import { useClient } from "../../hooks/useClient";
 import Action from "../../components/Action/Action";
 import { ActionType } from "../../components/Action/ActionType";
 
-export default function Daemon({daemonIsReachable})  {
+export default function Daemon({daemonIsReachable, setDaemonIsReachable})  {
     const { restartDaemon } = useClient();
     const [restartDaemonSuccess, setRestartDaemonSuccess] = useState<boolean | null>(null);
 
@@ -22,6 +22,7 @@ export default function Daemon({daemonIsReachable})  {
                 description="Restart daemon when functionalities like loading messages or updating settings does not work."
                 actionType={ActionType.Reset}
                 onClick={async () => {
+                    setDaemonIsReachable(false);
                     const success = await restartDaemon();
                     setRestartDaemonSuccess(success);
                 }}

@@ -10,9 +10,7 @@ import ChatInput from "./ChatInput";
 
 import "./ChatWindow.scss";
 
-export default function ChatWindow({ activeContact, loadContacts, setView }) {
-    const { messages, sendMessage } = useChat({activeContact: activeContact, loadContacts: loadContacts});
-
+export default function ChatWindow({ activeContact, loadContacts, setView, messages, sendMessage }) {
     const chatRef = useRef<HTMLDivElement>(null);
     const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);
     const [dayLabel, setDayLabel] = useState("today");
