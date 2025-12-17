@@ -22,3 +22,13 @@ pub async fn get_socket_stream(
 
     anyhow::bail!(error::DesktopUiError::SocketTimeout);
 }
+
+pub async fn launch_daemon() -> anyhow::Result<()> {
+    match get_socket_stream(SocketPaths::BROADCAST, 3, tokio::time::Duration::from_millis(2000)).await {
+        Ok(_) => return Ok(()),
+        Err(_) => {
+            std::process::Command::new("arti-chat-daemon-bin").spawn().expect("Failed to launch arti-chat-daemon-bin");
+            anyhow::bail!(error::DesktopUiError::DaemonStartFailure);
+        }
+    }
+}

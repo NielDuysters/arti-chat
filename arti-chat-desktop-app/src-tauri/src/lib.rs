@@ -32,6 +32,8 @@ pub fn run() {
 
             // Separate async task to receive messages from broadcast.
             tauri::async_runtime::spawn(async move {
+                ipc::launch_daemon().await.expect("Failed to launch daemon.");
+
                 let broadcast_stream = ipc::get_socket_stream(
                     ipc::SocketPaths::BROADCAST,
                     20,
