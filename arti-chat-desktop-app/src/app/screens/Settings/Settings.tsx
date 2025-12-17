@@ -6,10 +6,20 @@ import Action from "../../components/Action/Action";
 import { ActionType } from "../../components/Action/ActionType";
 
 export default function Settings({contacts, setContacts})  {
-    const { resetTorCircuit } = useClient();
+    const { resetTorCircuit, getConfigValue, setConfigValue } = useClient();
     const { deleteAllContacts } = useContacts({contacts: contacts, setContacts: setContacts});
     const [resetTorCircuitSuccess, setResetTorCircuitSuccess] = useState<boolean | null>(null);
     const [deleteAllContactsSuccess, setDeleteAllContactsSuccess] = useState<boolean | null>(null);
+    const [enableNotifications, setEnableNotifications] = useState<boolean>(false);
+
+    useEffect(() => {
+        const loadConfig = async () => {
+            const enableNotificationsValue = await getConfigValue("enable_notifications");
+            setEnableNotifications(enableNotificationsValue === "true")
+        };
+
+        loadConfig();
+    }, []);
 
     return (
         <div className="screen screen--settings">
@@ -34,6 +44,17 @@ export default function Settings({contacts, setContacts})  {
                     setDeleteAllContactsSuccess(success);
                 }}
                 success={deleteAllContactsSuccess}
+            />
+
+            <Action
+                label="Enable notifications"
+                description="Show desktop notifications for new messages."
+                actionType={ActionType.Toggle}
+                checked={enableNotifications}
+                onClick={async (checked: boolean) => {
+                    setEnableNotifications(checked);
+                    await setConfigValue("enable_notifications", checked.toString());
+                }}
             />
         </div>
     );
