@@ -23,6 +23,9 @@ pub struct Client {
     /// Database connection.
     pub db_conn: DatabaseConnection,
 
+    /// Configuration from database.
+    pub config: TokioMutex<ClientConfig>,
+
     /// Running hidden onion service.
     onion_service: std::sync::Arc<tor_hsservice::RunningOnionService>,
 
@@ -35,6 +38,42 @@ pub struct Client {
 
     /// Public key of user to verify received chat messages.
     public_key: VerifyingKey,
+}
+
+/// Client configuration from database.
+pub struct ClientConfig {
+    /// Enable/disable notifications.
+    pub enable_notifications: bool,
+}
+
+impl ClientConfig {
+    /// (Re)load client configuration from database.
+    pub async fn load(db_conn: DatabaseConnection) -> Result<Self, error::ClientError> {
+        Ok(Self {
+            enable_notifications: db::ConfigDb::get_bool("enable_notifications", db_conn.clone()).await?,
+        })
+    }
+
+    /// Get config value.
+    pub fn get(&self, key: ClientConfigKey) -> String {
+        match key {
+            ClientConfigKey::EnableNotifications => self.enable_notifications.to_string(),
+        }
+    }
+}
+
+/// Possible config keys.
+pub enum ClientConfigKey {
+    EnableNotifications,
+}
+
+impl ClientConfigKey {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "enable_notifications" => Some(Self::EnableNotifications),
+            _ => None,
+        }
+    }
 }
 
 impl Client {
@@ -69,7 +108,8 @@ impl Client {
         tracing::info!("ArtiChat client launched.");
         Ok(Self {
             tor_client: TokioMutex::new(tor_client),
-            db_conn,
+            db_conn: db_conn.clone(),
+            config: TokioMutex::new(ClientConfig::load(db_conn.clone()).await?),
             onion_service,
             request_stream,
             private_key,
@@ -183,6 +223,14 @@ impl Client {
         let mut tor_client = self.tor_client.lock().await;
         *tor_client = tor_client.clone_with_prefs(prefs);
         
+        Ok(())
+    }
+
+    /// Reload configuration from database.
+    pub async fn reload_config(&self) -> Result<(), error::ClientError> {
+        let new_config = ClientConfig::load(self.db_conn.clone()).await?;
+        let mut cfg = self.config.lock().await;
+        *cfg = new_config;
         Ok(())
     }
 
