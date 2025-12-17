@@ -32,6 +32,11 @@ export function useClient() {
     const pingDaemon = useCallback(async () : boolean => {
          return await invoke("ping_daemon");
     }, []);
+    
+    // Restart daemon.
+    const restartDaemon = useCallback(async () => {
+         await invoke("restart_daemon");
+    }, []);
 
     return {
         resetTorCircuit,
@@ -39,6 +44,7 @@ export function useClient() {
         setConfigValue,
         pingHiddenService,
         pingDaemon,
+        restartDaemon,
     };
 }
 

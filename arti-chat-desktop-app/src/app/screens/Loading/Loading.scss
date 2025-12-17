@@ -2,8 +2,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
+  text-align: center;
 
-  span {
-    font-size: 3em;
+  &__title {
+    font-size: 2em;
+    margin-bottom: 25px;
+  }
+
+  &__restart-btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--error-color-primary);
+    color: var(--text-white);
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
   }
 }

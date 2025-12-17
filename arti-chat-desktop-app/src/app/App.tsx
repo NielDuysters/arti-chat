@@ -26,6 +26,7 @@ const App = () => {
     const [view, setView] = useState("welcome");
     const [activeContact, setActiveContact] = useState(null);
     const [contacts, setContacts] = useState<Contact[]>([]);
+    const [initialLoadDone, setInitialLoadDone] = useState(false); 
    
     const { loadContacts } = useContacts({contacts: contacts, setContacts: setContacts});
     useChat({activeContact: activeContact, loadContacts: loadContacts});
@@ -35,7 +36,8 @@ const App = () => {
 
     // Load contacts once on mount.
     useEffect(() => {
-        if (daemonIsReachable === true) {
+        if (daemonIsReachable === true && !initialLoadDone) {
+            setInitialLoadDone(true);
             loadContacts();
         }
     }, [daemonIsReachable]);
@@ -48,7 +50,7 @@ const App = () => {
     }, [view]);
 
     // Show loading screen if daemon is not active yet.
-    if (!daemonIsReachable) {
+    if (!initialLoadDone) {
         return <Loading />;
     }
 
