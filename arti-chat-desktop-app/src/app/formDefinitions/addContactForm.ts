@@ -10,17 +10,10 @@ export const addContactForm: FieldConfig[] = [
         required: true,
     },
     {
-        name: "onion_id",
-        label: "Onion ID",
-        type: FieldType.Text,
-        placeholder: "abcdef.onion",
-        required: true,
-    },
-    {
-        name: "public_key",
-        label: "Public key",
-        type: FieldType.Text,
-        placeholder: "fwejewfpewijfepwjfew",
+        name: "share_token",
+        label: "Base64 share token",
+        type: FieldType.TextArea,
+        placeholder: "",
         required: true,
     },
 ];

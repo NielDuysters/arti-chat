@@ -25,16 +25,34 @@ export default function AddContact({contacts, setContacts, setActiveContact, set
         }
     }, [success, contacts, setActiveContact, setView]);
 
+    // Decode Base64 token to get user info.
+    const decodeShareToken = (token) => {
+        const decoded = window.atob(token);
+        const json = JSON.parse(decoded);
+
+        return {
+            "onion_id": json.onion_id,
+            "public_key": json.public_key,
+        }
+    }
+
     return (
         <div className="screen screen--add-contact">
             <h2>New contact</h2>
             <Form
                 fields={addContactForm}
                 onSubmit={async (values) => {
+                    let contactInfo;
+                    try {
+                        contactInfo = decodeShareToken(values.share_token);
+                    } catch (err) {
+                        return false;
+                    }
+
                     return await addContact({
                         nickname: values.nickname,
-                        onion_id: values.onion_id,
-                        public_key: values.public_key,
+                        onion_id: contactInfo.onion_id,
+                        public_key: contactInfo.public_key,
                     });
                 }}
                 success={success}

@@ -39,5 +39,43 @@
       padding-left: 0;
     }
   }
+
+  &--textarea__input {
+    width: 100%;
+    min-height: 140px;
+    padding: 12px 14px;
+
+    font-size: 0.85rem;
+    line-height: 1.4;
+
+    font-family: "Courier New";
+    color: var(--primary-color);
+    background: var(--dark);
+
+    border: 1px solid #3a3a3a;
+    border-radius: 15px;
+
+    resize: none;
+    cursor: text;
+    user-select: all;
+
+    overflow-wrap: break-word;
+    word-break: break-all;
+
+    line-height: 1.5;
+    letter-spacing: 0.5em;
+    overflow: hidden;
+
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(77, 163, 255, 0.25);
+    }
+
+    &:disabled {
+      background: var(--bg-dark);
+    }
+  }
 }
 
