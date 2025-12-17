@@ -1,0 +1,2 @@
+[workspace]
+members = ["arti-chat-daemon", "arti-chat-daemon-bin", "arti-chat-desktop-app/src-tauri"]
