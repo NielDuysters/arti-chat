@@ -36,6 +36,9 @@ pub enum RpcCommand {
 
     /// Reset Tor circuit.
     ResetTorCircuit,
+
+    /// Delete all contacts.
+    DeleteAllContacts,
 }
 
 /// LoadContacts response.
@@ -117,6 +120,9 @@ impl RpcCommand {
                 self.handle_delete_contact(onion_id, &tx_rpc, client.db_conn.clone()).await,
             RpcCommand::ResetTorCircuit => 
                 self.handle_reset_tor_circuit(client, &tx_rpc).await,
+            RpcCommand::DeleteAllContacts =>
+                self.handle_delete_all_contacts(&tx_rpc, client.db_conn.clone()).await,
+
         }
     }
 
@@ -299,6 +305,17 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
     ) -> Result<(), RpcError> {
         let success = client.reset_tor_circuit().await.is_ok();
+        SuccessResponse {
+            success,
+        }.send_rpc_reply(tx)
+    }
+
+    async fn handle_delete_all_contacts(
+        &self,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        db_conn: db::DatabaseConnection,
+    ) -> Result<(), RpcError> {
+        let success = db::ContactDb::delete_all(db_conn.clone()).await.is_ok();
         SuccessResponse {
             success,
         }.send_rpc_reply(tx)

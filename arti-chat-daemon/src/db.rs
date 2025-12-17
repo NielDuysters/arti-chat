@@ -505,6 +505,17 @@ pub trait DbModel : Sized {
 
         Ok(())
     }
+    
+    /// Default delete all behavior.
+    async fn delete_all(
+        conn: DatabaseConnection,
+    ) -> Result<(), error::DatabaseError> {
+        let conn = conn.lock().await;
+        let sql = format!("DELETE FROM {}", Self::table());
+        conn.execute(&sql, [])?;
+
+        Ok(())
+    }
 }
 
 /// Public trait with default behavior to update a model.
