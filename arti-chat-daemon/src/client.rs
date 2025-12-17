@@ -2,9 +2,10 @@
 //! services like the database, onion service,...
 
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
-use crate::{db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI}, message};
+use crate::{db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI}, message, ui_focus};
 use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
 use futures::{AsyncReadExt, AsyncWriteExt, Stream, StreamExt};
+use notify_rust::Notification;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::sync::Mutex as TokioMutex;
 use tor_cell::relaycell::msg::Connected;
@@ -310,6 +311,15 @@ impl Client {
 
                 // Send to message channel.
                 let _ = message_tx.send(serde_json::to_string(payload)?);
+
+                // Show notifcation for new message if user
+                // is not actively using the app.
+                if !ui_focus::is_focussed() {
+                    let _ = Notification::new()
+                    .summary("Arti chat")
+                    .body("You received a new message.")
+                    .show();
+                }
 
                 Ok(())
             },

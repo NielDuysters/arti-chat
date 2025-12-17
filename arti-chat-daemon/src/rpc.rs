@@ -1,7 +1,7 @@
 //! Remote Procedure Call commands.
 
 use async_trait::async_trait;
-use crate::{client, db::{self, DbModel, DbUpdateModel}, error::RpcError, ipc::MessageToUI};
+use crate::{client, db::{self, DbModel, DbUpdateModel}, error::RpcError, ipc::MessageToUI, ui_focus};
 
 /// List of RPC commands.
 #[derive(serde::Deserialize)]
@@ -39,6 +39,9 @@ pub enum RpcCommand {
 
     /// Delete all contacts.
     DeleteAllContacts,
+
+    /// Set app focus.
+    SendAppFocusState { focussed: bool },
 }
 
 /// LoadContacts response.
@@ -122,6 +125,10 @@ impl RpcCommand {
                 self.handle_reset_tor_circuit(client, &tx_rpc).await,
             RpcCommand::DeleteAllContacts =>
                 self.handle_delete_all_contacts(&tx_rpc, client.db_conn.clone()).await,
+            RpcCommand::SendAppFocusState { focussed } => {
+                println!("Received focussed state: {}", focussed);    
+                Ok(ui_focus::set_focussed(*focussed))
+            }
 
         }
     }
