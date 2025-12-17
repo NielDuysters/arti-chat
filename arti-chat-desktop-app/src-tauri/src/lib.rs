@@ -17,7 +17,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .on_window_event(|_, event| match event {
             // Update focus state when user changes focus or closes app.
-             tauri::WindowEvent::Focused(focused) => {
+            tauri::WindowEvent::Focused(focused) => {
                 APP_FOCUSED.store(*focused, Ordering::Relaxed);
             }
             tauri::WindowEvent::CloseRequested { .. } => {
@@ -32,15 +32,23 @@ pub fn run() {
 
             // Separate async task to receive messages from broadcast.
             tauri::async_runtime::spawn(async move {
-                ipc::launch_daemon().await.expect("Failed to launch daemon.");
+                if let Err(e) = ipc::launch_daemon().await {
+                    tracing::error!("launch_daemon failed: {e}");
+                    return;
+                }
 
-                let broadcast_stream = ipc::get_socket_stream(
+                let broadcast_stream = match ipc::get_socket_stream(
                     ipc::SocketPaths::BROADCAST,
                     20,
                     tokio::time::Duration::from_millis(1000),
                 )
-                .await
-                .expect("Failed to get broadcast stream.");
+                .await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::error!("broadcast socket failed: {e}");
+                        return;
+                    }
+                };
 
                 let mut lines = BufReader::new(broadcast_stream).lines();
                 while let Ok(Some(line)) = lines.next_line().await {
@@ -52,10 +60,9 @@ pub fn run() {
             // Separate async task to send focus state every 30 seconds.
             tauri::async_runtime::spawn(async move {
                 loop {
-                    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-
                     let focused = APP_FOCUSED.load(Ordering::Relaxed);
                     let _ = commands::send_focus_state(focused).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
                 }
             });
 
