@@ -6,6 +6,7 @@ use rand::RngCore;
 use rusqlite::{Connection, params, Row, ToSql};
 use tokio::sync::Mutex as TokioMutex;
 
+/// Type for rusqlite database connection.
 pub type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
 
 /// Primary key (after insert) can be of type can be String (onion_id) or int (id).
@@ -27,7 +28,8 @@ pub enum InsertId {
 }
 
 impl InsertId {
-     pub fn expect_i64(&self) -> Result<i64, error::DatabaseError> {
+    /// Get insertId only if type  i64.
+    pub fn expect_i64(&self) -> Result<i64, error::DatabaseError> {
         match self {
             InsertId::Integer(id) => Ok(*id),
             InsertId::Text(_) => Err(error::DatabaseError::InvalidPrimaryKeyType),
@@ -52,6 +54,17 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
             public_key TEXT NOT NULL,
             private_key TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+
+        INSERT INTO
+            config (key, value)
+        VALUES
+            ('enable_notifications', 'true')
+        ON CONFLICT(key) DO NOTHING;
 
         CREATE TABLE IF NOT EXISTS contact (
             onion_id TEXT PRIMARY KEY,
@@ -417,6 +430,70 @@ impl MessageDb {
         }
 
         Ok(results)
+    }
+}
+
+/// Type to get and set configuration.
+pub struct ConfigDb;
+
+impl ConfigDb {
+    /// Insert or update config value.
+    pub async fn set(
+        key: &str,
+        value: &str,
+        conn: DatabaseConnection,
+    ) -> Result<(), error::DatabaseError> {
+        let conn = conn.lock().await;
+        conn.execute(
+            r#"
+                INSERT INTO
+                   config
+                VALUES
+                    (?, ?)
+                ON CONFLICT(key) DO UPDATE
+                    SET value=excluded.value
+            "#,
+            params![key, value]
+        )?;
+
+        Ok(())
+    }
+
+    /// Get config value by key.
+    pub async fn get(
+        key: &str,
+        conn: DatabaseConnection,
+    ) -> Result<Option<String>, error::DatabaseError> {
+        let conn = conn.lock().await;
+        let result = conn.query_row(
+            "SELECT value FROM config WHERE key = ?1",
+            [key],
+            |row| row.get::<_, String>(0),
+        );
+
+        match result {
+            Ok(v) => Ok(Some(v)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    // --- Type specific getters and setters ---
+
+    /// Set config value as bool.
+    pub async fn set_bool(
+        key: &str,
+        value: bool,
+        conn: DatabaseConnection,
+    ) -> Result<(), error::DatabaseError> {
+        Self::set(key, &value.to_string(), conn).await
+    }
+    /// Get config value as bool.
+    pub async fn get_bool(
+        key: &str,
+        conn: DatabaseConnection,
+    ) -> Result<bool, error::DatabaseError> {
+        Ok(Self::get(key, conn).await?.as_deref() == Some("true"))
     }
 }
 

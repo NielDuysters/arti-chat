@@ -82,6 +82,10 @@ pub enum ClientError {
     /// Error related to message.
     #[error("Message error: {0}")]
     MessageError(#[from] MessageError),
+
+    /// Invalid config key.
+    #[error("Invalid config key.")]
+    InvalidConfigKey,
 }
 
 /// Errors related to database.
