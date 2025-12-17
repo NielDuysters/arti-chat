@@ -180,9 +180,9 @@ pub trait SendRpcCommand: Sized + serde::Serialize {
         ).await?;
 
         // Craft RPC command.
-        let mut rpc_cmd = serde_json::to_value(self)?
-            .as_object()
-            .unwrap()
+        let value = serde_json::to_value(self)?;
+        let mut rpc_cmd = value.as_object()
+            .ok_or_else(|| anyhow::anyhow!("RPC command must serialize to a JSON object"))?
             .clone();
         rpc_cmd.insert("cmd".into(), cmd_name::<Self>().into());
         let rpc_json = serde_json::to_string(&rpc_cmd)? + "\n";
