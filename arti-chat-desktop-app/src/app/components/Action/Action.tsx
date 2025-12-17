@@ -2,7 +2,7 @@ import React from "react";
 import { ActionType } from "./ActionType";
 import "./Action.scss";
 
-export default function Action({label, description, actionType, onClick, success}) {
+export default function Action({label, description, actionType, onClick, success, checked}) {
    
     const successIcon = (success) => {
         if (success === false) {
@@ -72,6 +72,17 @@ export default function Action({label, description, actionType, onClick, success
                         Reset
                     </button>
                 )
+            case ActionType.Toggle:
+                return (
+                    <label className="action__toggle">
+                        <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => onClick(e.target.checked)}
+                        />
+                        <span className="action__toggle__slider" />
+                    </label>
+                );
         }
     };
 
