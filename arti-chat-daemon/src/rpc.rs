@@ -48,6 +48,9 @@ pub enum RpcCommand {
     
     /// Set config value.
     SetConfigValue { key: String, value: String },
+
+    /// Ping our hidden service.
+    PingHiddenService,
 }
 
 /// LoadContacts response.
@@ -145,6 +148,8 @@ impl RpcCommand {
                 self.handle_get_config_value(key, client, &tx_rpc).await,
             RpcCommand::SetConfigValue { key, value } =>
                 self.handle_set_config_value(key, value, client).await,
+            RpcCommand::PingHiddenService =>
+                self.handle_ping_hidden_service(client, &tx_rpc).await,
 
         }
     }
@@ -367,6 +372,17 @@ impl RpcCommand {
         let _ = db::ConfigDb::set(key, &value, client.db_conn.clone()).await?;
         client.reload_config().await?;
         Ok(())
+    }
+    
+    async fn handle_ping_hidden_service(
+        &self,
+        client: &client::Client,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+    ) -> Result<(), RpcError> {
+        let success = client.is_reachable().await.is_ok();
+        SuccessResponse {
+            success,
+        }.send_rpc_reply(tx)
     }
 }
 

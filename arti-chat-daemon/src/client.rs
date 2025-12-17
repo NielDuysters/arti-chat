@@ -182,7 +182,7 @@ impl Client {
 
                 if retry.is_ok() {
                     tracing::info!("Retry success message {}", msg.id);
-                    
+
                     // On success update sent_status + update UI.
                     db::UpdateMessageDb {
                         id: msg.id,
@@ -221,10 +221,10 @@ impl Client {
     pub async fn reset_tor_circuit(&self) -> Result<(), error::ClientError> {
         let mut prefs = arti_client::StreamPrefs::new();
         prefs.new_isolation_group();
-        
+
         let mut tor_client = self.tor_client.lock().await;
         *tor_client = tor_client.clone_with_prefs(prefs);
-        
+
         Ok(())
     }
 
@@ -234,6 +234,27 @@ impl Client {
         let mut cfg = self.config.lock().await;
         *cfg = new_config;
         Ok(())
+    }
+
+    /// Checks if our hidden onion service is reachable.
+    pub async fn is_reachable(&self) -> Result<bool, error::ClientError> {
+        let onion_id = self.get_identity_unredacted()?;
+        let target = format!("{}:80", onion_id);
+        let tor_client = self.tor_client.lock().await;
+        let connect_future = tor_client.connect(target);
+        let result = tokio::time::timeout(std::time::Duration::from_secs(45), connect_future).await;
+
+        match result {
+            Err(_) => {
+                Ok(false)
+            },
+            Ok(Ok(_stream)) => {
+                Ok(true)
+            }
+            Ok(Err(_)) => {
+                Ok(false)
+            }
+        }
     }
 
     async fn bootstrap_tor_client() -> Result<ArtiTorClient, error::ClientError> {
@@ -368,9 +389,9 @@ impl Client {
                 let client_config = client_config.lock().await;
                 if client_config.enable_notifications && !ui_focus::is_focussed() {
                     let _ = Notification::new()
-                    .summary("Arti chat")
-                    .body("You received a new message.")
-                    .show();
+                        .summary("Arti chat")
+                        .body("You received a new message.")
+                        .show();
                 }
 
                 Ok(())
