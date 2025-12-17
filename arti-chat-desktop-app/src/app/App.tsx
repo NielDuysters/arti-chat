@@ -5,9 +5,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { Contact, useContacts } from "./hooks/useContacts";
 import { useChat } from "./hooks/useChat";
 import { useHiddenServicePing } from "./hooks/usePingHiddenService";
+import { useDaemonPing } from "./hooks/usePingDaemon";
 
 import Nav from "./components/Nav/Nav";
 import ContactList from "./components/Contacts/ContactList";
+import Loading from "./screens/Loading/Loading";
 import Welcome from "./screens/Welcome/Welcome";
 import AddContact from "./screens/AddContact/AddContact";
 import ContactDetails from "./screens/ContactDetails/ContactDetails";
@@ -27,11 +29,16 @@ const App = () => {
    
     const { loadContacts } = useContacts({contacts: contacts, setContacts: setContacts});
     useChat({activeContact: activeContact, loadContacts: loadContacts});
+    
+    const { daemonIsReachable } = useDaemonPing();
+    const { hsIsReachable } = useHiddenServicePing();
 
     // Load contacts once on mount.
     useEffect(() => {
-        loadContacts();
-    }, []);
+        if (daemonIsReachable === true) {
+            loadContacts();
+        }
+    }, [daemonIsReachable]);
 
     // Set activeContact to null if going to different screen then chat.
     useEffect(() => {
@@ -40,7 +47,10 @@ const App = () => {
         }
     }, [view]);
 
-    const { isReachable } = useHiddenServicePing();
+    // Show loading screen if daemon is not active yet.
+    if (!daemonIsReachable) {
+        return <Loading />;
+    }
 
     const renderView = () => {
         switch (view) {
@@ -75,7 +85,7 @@ const App = () => {
                         />
             case "tor-circuit":
                 return <TorCircuit
-                            isReachable={isReachable}
+                            hsIsReachable={hsIsReachable}
                         />
         }
     }
@@ -85,7 +95,8 @@ const App = () => {
         <main className="container">
           <Nav
             setView={setView}
-            isReachable={isReachable}
+            hsIsReachable={hsIsReachable}
+            daemonIsReachable={daemonIsReachable}
           />
           <ContactList
             contacts={contacts}

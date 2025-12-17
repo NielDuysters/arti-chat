@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useClient } from "./useClient";
 
-const PING_INTERVAL_MS = 60000;
+const PING_INTERVAL_MS = 10000;
 
-export function useHiddenServicePing() {
-    const { pingHiddenService } = useClient();
+export function useDaemonPing() {
+    const { pingDaemon } = useClient();
 
-    const [hsIsReachable, setHsIsReachable] = useState<boolean | null>(null);
+    const [daemonIsReachable, setDaemonIsReachable] = useState<boolean | null>(null);
     const intervalRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -14,13 +14,13 @@ export function useHiddenServicePing() {
 
         const ping = async () => {
             try {
-                const result = await pingHiddenService();
+                const result = await pingDaemon();
                 if (!cancelled) {
-                    setHsIsReachable(result);
+                    setDaemonIsReachable(result);
                 }
             } catch {
                 if (!cancelled) {
-                    setHsIsReachable(false);
+                    setDaemonIsReachable(false);
                 }
             }
         };
@@ -37,10 +37,10 @@ export function useHiddenServicePing() {
                 clearInterval(intervalRef.current);
             }
         };
-    }, [pingHiddenService]);
+    }, [pingDaemon]);
 
     return {
-        hsIsReachable,
+        daemonIsReachable,
     };
 }
 

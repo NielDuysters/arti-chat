@@ -1,7 +1,7 @@
 import React from "react";
 import "./Nav.scss";
 
-export default function Nav({setView, isReachable}) {
+export default function Nav({setView, hsIsReachable, daemonIsReachable}) {
     const statusIndicator = (status) => {
         if (status === null) {
             return;
@@ -34,6 +34,7 @@ export default function Nav({setView, isReachable}) {
 
             <div className="nav__item" data-screen="daemon">
                 <img src="/src/assets/daemon-active.png" alt="Daemon" />
+                {statusIndicator(daemonIsReachable)}
             </div>
 
             <div
@@ -43,7 +44,7 @@ export default function Nav({setView, isReachable}) {
                 }}
             >
                 <img src="/src/assets/tor-circuit.png" alt="Tor" />
-                {statusIndicator(isReachable)}
+                {statusIndicator(hsIsReachable)}
             </div>
 
             <div className="nav__item" data-screen="faq">

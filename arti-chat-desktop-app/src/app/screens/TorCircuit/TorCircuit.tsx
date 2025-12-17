@@ -4,7 +4,7 @@ import { useClient } from "../../hooks/useClient";
 import Action from "../../components/Action/Action";
 import { ActionType } from "../../components/Action/ActionType";
 
-export default function TorCircuit({isReachable})  {
+export default function TorCircuit({hsIsReachable})  {
     const { resetTorCircuit } = useClient();
     const [resetTorCircuitSuccess, setResetTorCircuitSuccess] = useState<boolean | null>(null);
 
@@ -15,7 +15,7 @@ export default function TorCircuit({isReachable})  {
                 label="Status"
                 description="Status of our hidden onion service."
                 actionType={ActionType.Status}
-                status={isReachable}
+                status={hsIsReachable}
             />
             <Action
                 label="Reset Tor circuit"

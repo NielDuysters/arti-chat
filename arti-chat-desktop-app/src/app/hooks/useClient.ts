@@ -27,12 +27,18 @@ export function useClient() {
     const pingHiddenService = useCallback(async () : boolean => {
          return await invoke("ping_hidden_service");
     }, []);
+    
+    // Ping daemon.
+    const pingDaemon = useCallback(async () : boolean => {
+         return await invoke("ping_daemon");
+    }, []);
 
     return {
         resetTorCircuit,
         getConfigValue,
         setConfigValue,
         pingHiddenService,
+        pingDaemon,
     };
 }
 
