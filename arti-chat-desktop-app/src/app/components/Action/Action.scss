@@ -87,5 +87,10 @@
     }
   }
 
-
+  &__status {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 7px;
+  }
 }

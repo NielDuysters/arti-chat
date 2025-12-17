@@ -2,7 +2,7 @@ import React from "react";
 import { ActionType } from "./ActionType";
 import "./Action.scss";
 
-export default function Action({label, description, actionType, onClick, success, checked}) {
+export default function Action({label, description, actionType, onClick, success, checked, status}) {
    
     const successIcon = (success) => {
         if (success === false) {
@@ -49,6 +49,7 @@ export default function Action({label, description, actionType, onClick, success
                         Delete
                     </button>
                 )
+
             case ActionType.Reset:
                 var buttonImage = (success) => {
                     if (success === null) {
@@ -72,6 +73,7 @@ export default function Action({label, description, actionType, onClick, success
                         Reset
                     </button>
                 )
+
             case ActionType.Toggle:
                 return (
                     <label className="action__toggle">
@@ -83,6 +85,15 @@ export default function Action({label, description, actionType, onClick, success
                         <span className="action__toggle__slider" />
                     </label>
                 );
+
+            case ActionType.Status:
+                return (
+                    <>
+                        {status === null && <span className="action__status">Checking...</span>}
+                        {status === true && <span className="action__status">{successIcon(status)} Connected</span>}
+                        {status === false && <span className="action__status">{successIcon(status)} Offline</span>}
+                    </>
+                )
         }
     };
 
