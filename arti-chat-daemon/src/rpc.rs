@@ -1,7 +1,7 @@
 //! Remote Procedure Call commands.
 
 use async_trait::async_trait;
-use crate::{client, db::{self, DbModel, DbUpdateModel}, error::RpcError, ipc::MessageToUI, ui_focus};
+use crate::{client::{self, ClientConfig, ClientConfigKey}, db::{self, DbModel, DbUpdateModel}, error::{self, RpcError}, ipc::MessageToUI, ui_focus};
 
 /// List of RPC commands.
 #[derive(serde::Deserialize)]
@@ -42,6 +42,12 @@ pub enum RpcCommand {
 
     /// Set app focus.
     SendAppFocusState { focussed: bool },
+
+    /// Get config value.
+    GetConfigValue { key: String },
+    
+    /// Set config value.
+    SetConfigValue { key: String, value: String },
 }
 
 /// LoadContacts response.
@@ -75,6 +81,14 @@ pub struct LoadUserResponse {
     pub user: serde_json::Value,
 }
 impl SendRpcReply for LoadUserResponse {}
+
+/// Get config value.
+#[derive(serde::Serialize)]
+pub struct GetConfigValueResponse {
+    /// Value of config.
+    pub value: String,
+}
+impl SendRpcReply for GetConfigValueResponse {}
 
 /// Trait to define default behavior to send RPC reply.
 #[async_trait]
@@ -125,10 +139,12 @@ impl RpcCommand {
                 self.handle_reset_tor_circuit(client, &tx_rpc).await,
             RpcCommand::DeleteAllContacts =>
                 self.handle_delete_all_contacts(&tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::SendAppFocusState { focussed } => {
-                println!("Received focussed state: {}", focussed);    
-                Ok(ui_focus::set_focussed(*focussed))
-            }
+            RpcCommand::SendAppFocusState { focussed } =>
+                Ok(ui_focus::set_focussed(*focussed)),
+            RpcCommand::GetConfigValue { key } =>
+                self.handle_get_config_value(key, client, &tx_rpc).await,
+            RpcCommand::SetConfigValue { key, value } =>
+                self.handle_set_config_value(key, value, client).await,
 
         }
     }
@@ -326,6 +342,31 @@ impl RpcCommand {
         SuccessResponse {
             success,
         }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_get_config_value(
+        &self,
+        key: &str,
+        client: &client::Client,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+    ) -> Result<(), RpcError> {
+        let key = ClientConfigKey::from_str(key).ok_or(error::ClientError::InvalidConfigKey)?;
+        let cfg = client.config.lock().await;
+        let value = cfg.get(key);
+        GetConfigValueResponse {
+            value
+        }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_set_config_value(
+        &self,
+        key: &str,
+        value: &str,
+        client: &client::Client,
+    ) -> Result<(), RpcError> {
+        let _ = db::ConfigDb::set(key, &value, client.db_conn.clone()).await?;
+        client.reload_config().await?;
+        Ok(())
     }
 }
 
