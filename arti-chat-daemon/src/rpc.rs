@@ -51,6 +51,9 @@ pub enum RpcCommand {
 
     /// Ping our hidden service.
     PingHiddenService,
+
+    /// Ping daemon.
+    PingDaemon,
 }
 
 /// LoadContacts response.
@@ -150,6 +153,8 @@ impl RpcCommand {
                 self.handle_set_config_value(key, value, client).await,
             RpcCommand::PingHiddenService =>
                 self.handle_ping_hidden_service(client, &tx_rpc).await,
+            RpcCommand::PingDaemon =>
+                self.handle_ping_daemon(&tx_rpc).await,
 
         }
     }
@@ -382,6 +387,15 @@ impl RpcCommand {
         let success = client.is_reachable().await.is_ok();
         SuccessResponse {
             success,
+        }.send_rpc_reply(tx)
+    }
+    
+    async fn handle_ping_daemon(
+        &self,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+    ) -> Result<(), RpcError> {
+        SuccessResponse {
+            success: true,
         }.send_rpc_reply(tx)
     }
 }
