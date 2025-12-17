@@ -354,6 +354,8 @@ impl Client {
                             break;
                         }
                         read_buffer.push(byte[0]);
+                    } else {
+                        break;
                     }
                 }
 
@@ -397,7 +399,7 @@ impl Client {
                 Ok(())
             },
             _ => {
-                request.shutdown_circuit().expect("Failed to shutdown circuit.");
+                let _ = request.shutdown_circuit();
                 Ok(())
             }
         }
