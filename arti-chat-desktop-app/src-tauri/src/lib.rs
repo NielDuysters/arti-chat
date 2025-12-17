@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::Emitter;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -7,10 +8,25 @@ pub mod ipc;
 pub mod model;
 pub mod rpc;
 
+// Atomic bool indicating if the user has the app open and focussed.
+static APP_FOCUSED: AtomicBool = AtomicBool::new(true);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .on_window_event(|_, event| match event {
+            // Update focus state when user changes focus or closes app.
+             tauri::WindowEvent::Focused(focused) => {
+                APP_FOCUSED.store(*focused, Ordering::Relaxed);
+            }
+            tauri::WindowEvent::CloseRequested { .. } => {
+                tauri::async_runtime::spawn(async move {
+                    let _ = commands::send_focus_state(false).await; 
+                });
+            }
+            _ => {}
+        })
         .setup(|app| {
             let app_handle = app.handle().clone();
 
@@ -28,6 +44,16 @@ pub fn run() {
                 while let Ok(Some(line)) = lines.next_line().await {
                     tracing::info!("Received message: {}", line);
                     let _ = app_handle.emit("incoming-message", line);
+                }
+            });
+
+            // Separate async task to send focus state every 30 seconds.
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+
+                    let focused = APP_FOCUSED.load(Ordering::Relaxed);
+                    let _ = commands::send_focus_state(focused).await;
                 }
             });
 
@@ -49,3 +75,4 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

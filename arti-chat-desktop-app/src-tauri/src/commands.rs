@@ -68,3 +68,8 @@ pub async fn delete_all_contacts() -> Result<bool, String> {
     let response = rpc::DeleteAllContacts{}.receive().await.expect("Failed to delete all contacts.");
     Ok(response.success)
 }
+
+pub async fn send_focus_state(focussed: bool) -> Result<(), String> {
+    let _ = rpc::SendAppFocusState{ focussed }.send().await.expect("Failed to send app focus state.");
+    Ok(())
+}

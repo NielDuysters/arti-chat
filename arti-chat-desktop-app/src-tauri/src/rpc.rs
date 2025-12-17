@@ -122,6 +122,14 @@ pub struct DeleteAllContacts {}
 impl SendRpcCommand for DeleteAllContacts {}
 impl ReceiveRpcReply<SuccessResponse> for DeleteAllContacts {} 
 
+/// --- Send app focus state ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SendAppFocusState {
+    pub focussed: bool,
+}
+
+impl SendRpcCommand for SendAppFocusState {}
+
 
 /// Trait to send types as RPC command.
 #[async_trait]
