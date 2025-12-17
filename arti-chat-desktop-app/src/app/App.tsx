@@ -16,6 +16,7 @@ import ContactDetails from "./screens/ContactDetails/ContactDetails";
 import UserDetails from "./screens/UserDetails/UserDetails";
 import Settings from "./screens/Settings/Settings";
 import TorCircuit from "./screens/TorCircuit/TorCircuit";
+import Daemon from "./screens/Daemon/Daemon";
 import ChatWindow from "./components/Chat/ChatWindow";
 
 import "./../styles/globals.scss";
@@ -88,6 +89,10 @@ const App = () => {
             case "tor-circuit":
                 return <TorCircuit
                             hsIsReachable={hsIsReachable}
+                        />
+            case "daemon":
+                return <Daemon
+                            daemonIsReachable={daemonIsReachable}
                         />
         }
     }

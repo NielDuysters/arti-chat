@@ -32,8 +32,13 @@ export default function Nav({setView, hsIsReachable, daemonIsReachable}) {
                 <img src="/src/assets/settings.png" alt="Settings" />
             </div>
 
-            <div className="nav__item" data-screen="daemon">
-                <img src="/src/assets/daemon-active.png" alt="Daemon" />
+            <div
+                className="nav__item"
+                onClick={() => {
+                    setView("daemon");
+                }}
+            >
+                <img src="/src/assets/daemon.png" alt="Daemon" />
                 {statusIndicator(daemonIsReachable)}
             </div>
 
