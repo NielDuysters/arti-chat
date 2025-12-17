@@ -71,7 +71,7 @@ export function useChat({activeContact, loadContacts}) {
         return () => {
             promise.then((p) => p());
         };
-    }, [activeContact, loadChat])
+    }, [loadContacts, loadChat])
 
     return {
         messages,

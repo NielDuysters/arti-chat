@@ -3,6 +3,7 @@ import reactLogo from "./../assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 
 import { Contact, useContacts } from "./hooks/useContacts";
+import { useChat } from "./hooks/useChat";
 
 import Nav from "./components/Nav/Nav";
 import ContactList from "./components/Contacts/ContactList";
@@ -23,6 +24,7 @@ const App = () => {
     const [contacts, setContacts] = useState<Contact[]>([]);
    
     const { loadContacts } = useContacts({contacts: contacts, setContacts: setContacts});
+    useChat({activeContact: activeContact, loadContacts: loadContacts});
 
     // Load contacts once on mount.
     useEffect(() => {
