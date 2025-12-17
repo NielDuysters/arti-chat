@@ -37,23 +37,25 @@ pub fn run() {
                     return;
                 }
 
-                let broadcast_stream = match ipc::get_socket_stream(
-                    ipc::SocketPaths::BROADCAST,
-                    20,
-                    tokio::time::Duration::from_millis(1000),
-                )
-                .await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("broadcast socket failed: {e}");
-                        return;
-                    }
-                };
+                loop {
+                    let broadcast_stream = match ipc::get_socket_stream(
+                        ipc::SocketPaths::BROADCAST,
+                        20,
+                        tokio::time::Duration::from_millis(1000),
+                    )
+                    .await {
+                        Ok(s) => s,
+                        Err(e) => {
+                            tracing::error!("broadcast socket failed: {e}");
+                            return;
+                        }
+                    };
 
-                let mut lines = BufReader::new(broadcast_stream).lines();
-                while let Ok(Some(line)) = lines.next_line().await {
-                    tracing::info!("Received message: {}", line);
-                    let _ = app_handle.emit("incoming-message", line);
+                    let mut lines = BufReader::new(broadcast_stream).lines();
+                    while let Ok(Some(line)) = lines.next_line().await {
+                        tracing::info!("Received message: {}", line);
+                        let _ = app_handle.emit("incoming-message", line);
+                    }
                 }
             });
 
