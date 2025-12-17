@@ -416,6 +416,8 @@ impl MessageDb {
                 sent_status = 0
               AND
                 is_incoming = 0
+              AND
+                timestamp <= strftime('%s','now') - 60
              ORDER BY
                 timestamp DESC"
         )?;
