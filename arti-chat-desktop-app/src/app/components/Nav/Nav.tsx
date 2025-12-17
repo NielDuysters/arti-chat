@@ -26,7 +26,12 @@ export default function Nav({setView}) {
                 <img src="/src/assets/daemon-active.png" alt="Daemon" />
             </div>
 
-            <div className="nav__item" data-screen="tor">
+            <div
+                className="nav__item"
+                onClick={() => {
+                    setView("tor-circuit");
+                }}
+            >
                 <img src="/src/assets/tor-active.png" alt="Tor" />
             </div>
 

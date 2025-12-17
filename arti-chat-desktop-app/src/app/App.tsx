@@ -12,6 +12,7 @@ import AddContact from "./screens/AddContact/AddContact";
 import ContactDetails from "./screens/ContactDetails/ContactDetails";
 import UserDetails from "./screens/UserDetails/UserDetails";
 import Settings from "./screens/Settings/Settings";
+import TorCircuit from "./screens/TorCircuit/TorCircuit";
 import ChatWindow from "./components/Chat/ChatWindow";
 
 import "./../styles/globals.scss";
@@ -62,6 +63,8 @@ const App = () => {
                             contacts={contacts}
                             setContacts={setContacts}
                         />
+            case "tor-circuit":
+                return <TorCircuit />
         }
     }
 
