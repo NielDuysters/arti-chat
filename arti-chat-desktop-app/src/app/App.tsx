@@ -32,6 +32,13 @@ const App = () => {
         loadContacts();
     }, []);
 
+    // Set activeContact to null if going to different screen then chat.
+    useEffect(() => {
+        if (view !== "chat" && view !== "contact-details") {
+            setActiveContact(null);
+        }
+    }, [view]);
+
     const renderView = () => {
         switch (view) {
             case "welcome":
