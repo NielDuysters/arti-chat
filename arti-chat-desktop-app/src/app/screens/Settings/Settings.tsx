@@ -1,12 +1,15 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { useClient } from "../../hooks/useClient";
+import { useContacts } from "../../hooks/useContacts";
 import Action from "../../components/Action/Action";
 import { ActionType } from "../../components/Action/ActionType";
 
-export default function Settings()  {
+export default function Settings({contacts, setContacts})  {
     const { resetTorCircuit } = useClient();
-    const [success, setSuccess] = useState<boolean | null>(null);
+    const { deleteAllContacts } = useContacts({contacts: contacts, setContacts: setContacts});
+    const [resetTorCircuitSuccess, setResetTorCircuitSuccess] = useState<boolean | null>(null);
+    const [deleteAllContactsSuccess, setDeleteAllContactsSuccess] = useState<boolean | null>(null);
 
     return (
         <div className="screen screen--settings">
@@ -17,9 +20,20 @@ export default function Settings()  {
                 actionType={ActionType.Reset}
                 onClick={async () => {
                     const success = await resetTorCircuit();
-                    setSuccess(success);
+                    setResetTorCircuitSuccess(success);
                 }}
-                success={success}
+                success={resetTorCircuitSuccess}
+            />
+            
+            <Action
+                label="Delete all contacts"
+                description="Delete all contacts and messages."
+                actionType={ActionType.Delete}
+                onClick={async () => {
+                    const success = await deleteAllContacts();
+                    setDeleteAllContactsSuccess(success);
+                }}
+                success={deleteAllContactsSuccess}
             />
         </div>
     );

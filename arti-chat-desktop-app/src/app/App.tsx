@@ -56,7 +56,10 @@ const App = () => {
             case "user-details":
                 return <UserDetails />
             case "settings":
-                return <Settings />
+                return <Settings
+                            contacts={contacts}
+                            setContacts={setContacts}
+                        />
         }
     }
 

@@ -74,6 +74,17 @@ export function useContacts({contacts, setContacts}) {
         },
         [loadContacts]
     );
+    
+    // Delete all contacts.
+    const deleteAllContacts = useCallback(
+        async (): boolean => {
+            let response = await invoke("delete_all_contacts");
+            await loadContacts();
+
+            return response;
+        },
+        [loadContacts]
+    );
 
     return {
         loadContacts,
@@ -82,6 +93,7 @@ export function useContacts({contacts, setContacts}) {
         updateContact,
         deleteContactMessages,
         deleteContact,
+        deleteAllContacts,
     };
 }
 
