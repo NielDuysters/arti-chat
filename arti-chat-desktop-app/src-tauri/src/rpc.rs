@@ -153,6 +153,13 @@ pub struct SetConfigValue {
 
 impl SendRpcCommand for SetConfigValue {}
 
+/// --- Ping hidden service ---
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct PingHiddenService {}
+
+impl SendRpcCommand for PingHiddenService {}
+impl ReceiveRpcReply<SuccessResponse> for PingHiddenService {} 
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {

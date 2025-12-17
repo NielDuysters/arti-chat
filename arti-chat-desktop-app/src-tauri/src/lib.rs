@@ -73,6 +73,7 @@ pub fn run() {
             commands::delete_all_contacts,
             commands::get_config_value,
             commands::set_config_value,
+            commands::ping_hidden_service,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -85,3 +85,11 @@ pub async fn set_config_value(key: String, value: String) -> Result<(), String> 
     let _ = rpc::SetConfigValue{ key, value }.send().await.expect("Failed to set config value.");
     Ok(())
 }
+
+#[tauri::command]
+pub async fn ping_hidden_service() -> Result<bool, String> {
+    match (rpc::PingHiddenService {}.receive().await) {
+        Ok(r) => Ok(r.success),
+        Err(_) => Ok(false),
+    }
+}
