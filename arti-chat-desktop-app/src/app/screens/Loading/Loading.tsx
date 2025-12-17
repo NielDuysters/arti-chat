@@ -39,7 +39,7 @@ export default function Loading() {
                         onClick={restart}
                         disabled={restarting}
                     >
-                        {restarting ? "Restarting…" : "Restart daemon"}
+                        {restarting ? "Restarting..." : "Restart daemon"}
                     </div>
                 </div>
             )}
