@@ -35,4 +35,22 @@
     display: flex;
     flex-direction: column;
   }
+
+  &__empty {
+    text-align: center;
+    margin-top: 25%;
+
+    &__btn {
+      margin-top: 1rem;
+      display: inline-block;
+      padding: 10px 15px;
+      background: var(--primary-color);
+      color: var(--text-dark);
+      font-size: 0.9rem;
+      font-weight: 700;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.15s;
+    }
+  }
 }

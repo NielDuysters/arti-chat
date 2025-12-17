@@ -18,6 +18,20 @@ export default function ContactList({contacts, setActiveContact, setView}) {
       </div>
 
       <div className="contacts__list">
+        
+        {contacts.length === 0 && (<div className="contacts__empty">
+                                   No contacts yet.
+
+                                    <div
+                                        className="contacts__empty__btn"
+                                        onClick={() => {
+                                            setView('add-contact');
+                                        }}
+                                        >
+                                        <span>Add first contact</span>
+                                    </div>
+                                       </div>)}
+
         {contacts.map((c) => (
             <ContactItem
                 key={c.onion_id}

@@ -18,7 +18,7 @@ export default function AddContact({contacts, setContacts, setActiveContact, set
                     setActiveContact(newestContact);
                     setView("chat");
                 }
-            }, 750);
+            }, 1025);
 
             return () => clearTimeout(timer);
 
