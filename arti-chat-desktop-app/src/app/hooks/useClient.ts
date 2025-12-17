@@ -8,8 +8,25 @@ export function useClient() {
          return await invoke("reset_tor_circuit");
     }, []);
 
+    // Get config value.
+    const getConfigValue = useCallback(async (key) : string => {
+         return await invoke("get_config_value", {
+             key: key,
+         });
+    }, []);
+    
+    // Set config value.
+    const setConfigValue = useCallback(async (key, value) => {
+         await invoke("set_config_value", {
+             key: key,
+             value: value,
+         });
+    }, []);
+
     return {
-        resetTorCircuit
+        resetTorCircuit,
+        getConfigValue,
+        setConfigValue,
     };
 }
 
