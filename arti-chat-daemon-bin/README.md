@@ -1,3 +1,3 @@
-# Arti Chat Daemon Binary
+# arti-chat-daemon-bin
 
-Binary used to launch the daemon.
+This binary calls the library `arti-chat-daemon`. This binary is made into a daemon so it runs on the background.
