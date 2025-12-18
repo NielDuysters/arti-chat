@@ -67,6 +67,7 @@ curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/34c130bce987
 - [ ] Allow reusing same HsId.
 - [ ] Correct implementation for daemon (e.g systemd).
 - [ ] Unit tests.
+- [ ] Cleanup git repo.
 
 **Arti Chat - alpha-v0.2.0:**
 - [ ] Windows support.
