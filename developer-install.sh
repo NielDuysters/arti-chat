@@ -6,8 +6,8 @@ echo "Install steps:"
 echo "  1. Check prerequisites"
 echo "  2. Clone arti-chat repository to ~/.local/src"
 echo "  3. Build project from source"
-echo "  4. Cargo install --path arti-chat-daemon-bin"
-echo "  5. Install binaries in ~/.local/bin"
+echo "   3a. Cargo install --path arti-chat-daemon-bin"
+echo "  4. Install binaries in ~/.local/bin"
 echo
 echo "Press Ctrl + C to abort or wait 15 seconds to continue..."
 sleep 15
@@ -16,12 +16,16 @@ sleep 15
 echo
 echo
 echo "1. Checking prerequisites..."
+
+MISSING_DEPS=false
+
 require() {
     if (( $# == 1 )); then
         if command -v "$1" >/dev/null 2>&1; then
             printf "  ✅"
         else
             printf "  ❌"
+            MISSING_DEPS=true
         fi
         printf " $1\n"
     else
@@ -29,6 +33,7 @@ require() {
             printf "  ✅"
         else
             printf "  ❌"
+            MISSING_DEPS=true
         fi
         printf " $*\n"
     fi
@@ -39,6 +44,14 @@ require rustc
 require cargo
 require cargo tauri
 require npm
+
+echo
+if [ "$MISSING_DEPS" = true ]; then
+    echo "❌ One or more required dependencies are missing..."
+    echo "Install them and retry installing..."
+    exit 1
+fi
+echo "✅ All prerequisites are satisfied."
 
 # Clone repo.
 echo
@@ -75,7 +88,7 @@ if [ ! -x "$ARTI_CHAT_DAEMON_BIN" ]; then
     exit 1
 fi
 echo "✅ arti-chat-daemon-bin build successfully."
-echo "Installing arti-chat-daemon-bin as command..."
+echo "3a. Installing arti-chat-daemon-bin as command..."
 cargo install --path arti-chat-daemon-bin
 if command -v "arti-chat-daemon-bin" >/dev/null 2>&1; then
     echo "✅ arti-chat-daemon-bin installed as command..."
@@ -99,7 +112,7 @@ echo "✅ arti-chat-desktop-app build successfully."
 # Install binaries.
 echo
 echo
-echo "5. Installing binaries..."
+echo "4. Installing binaries..."
 echo "Installing arti-chat-daemon-bin..."
 rm "$BIN_DIR/arti-chat-daemon-bin"
 CARGO_ARTI_CHAT_DAEMON_BIN="$(command -v arti-chat-daemon-bin)"
