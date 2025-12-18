@@ -145,7 +145,7 @@ export default function ChatWindow({ activeContact, loadContacts, setView, messa
                 <img
                     className="chat__top__details"
                     alt="Details"
-                    src="/src/assets/dots.png"
+                    src="/assets/dots.png"
                     onClick={() => {
                         setView("contact-details");
                     }}

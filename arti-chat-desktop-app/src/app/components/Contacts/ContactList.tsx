@@ -9,7 +9,7 @@ export default function ContactList({contacts, setActiveContact, setView}) {
         <span className="contacts__title">Chats</span>
         <img 
             className="contacts__new-btn"
-            src="/src/assets/edit.png"
+            src="/assets/edit.png"
             onClick={() => {
                 setActiveContact(null);
                 setView('add-contact');

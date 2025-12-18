@@ -45,7 +45,7 @@ export default function ChatInput({ sendMessage }) {
                     placeholder="Type your message..."
                 ></textarea>
                 <img
-                    src="/src/assets/send.png"
+                    src="/assets/send.png"
                     alt="Send message"
                     className="chat-input__send-btn"
                     onClick={handleSend}

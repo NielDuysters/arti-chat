@@ -20,7 +20,7 @@ export default function Nav({setView, hsIsReachable, daemonIsReachable}) {
                     setView("user-details");
                 }}
             >
-                <img src="/src/assets/me.png" alt="ME" />
+                <img src="/assets/me.png" alt="ME" />
             </div>
 
             <div
@@ -29,7 +29,7 @@ export default function Nav({setView, hsIsReachable, daemonIsReachable}) {
                     setView("settings");
                 }}
             >
-                <img src="/src/assets/settings.png" alt="Settings" />
+                <img src="/assets/settings.png" alt="Settings" />
             </div>
 
             <div
@@ -38,7 +38,7 @@ export default function Nav({setView, hsIsReachable, daemonIsReachable}) {
                     setView("daemon");
                 }}
             >
-                <img src="/src/assets/daemon.png" alt="Daemon" />
+                <img src="/assets/daemon.png" alt="Daemon" />
                 {statusIndicator(daemonIsReachable)}
             </div>
 
@@ -48,12 +48,12 @@ export default function Nav({setView, hsIsReachable, daemonIsReachable}) {
                     setView("tor-circuit");
                 }}
             >
-                <img src="/src/assets/tor-circuit.png" alt="Tor" />
+                <img src="/assets/tor-circuit.png" alt="Tor" />
                 {statusIndicator(hsIsReachable)}
             </div>
 
             <div className="nav__item" data-screen="faq">
-                <img src="/src/assets/faq.png" alt="FAQ" />
+                <img src="/assets/faq.png" alt="FAQ" />
             </div>
         </div>
     );

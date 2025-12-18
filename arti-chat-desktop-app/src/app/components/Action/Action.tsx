@@ -10,7 +10,7 @@ export default function Action({label, description, actionType, onClick, success
                 <img
                     className="form__submit-btn__status"
                     alt="Failed"
-                    src="/src/assets/button-failed.png"
+                    src="/assets/button-failed.png"
                 />
             );
         }
@@ -19,7 +19,7 @@ export default function Action({label, description, actionType, onClick, success
             <img
                 className="form__submit-btn__status"
                 alt="Success"
-                src="/src/assets/button-success.png"
+                src="/assets/button-success.png"
             />
         );
     }
@@ -32,7 +32,7 @@ export default function Action({label, description, actionType, onClick, success
                         return (
                             <img
                                 className="action__button__image"
-                                src="/src/assets/delete.png"
+                                src="/assets/delete.png"
                             />
                         )
                     }
@@ -56,7 +56,7 @@ export default function Action({label, description, actionType, onClick, success
                         return (
                             <img
                                 className="action__button__image"
-                                src="/src/assets/reset.png"
+                                src="/assets/reset.png"
                             />
                         )
                     }

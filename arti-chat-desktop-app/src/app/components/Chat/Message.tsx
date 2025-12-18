@@ -15,7 +15,7 @@ export default function Message({ message }) {
                     className="message__sent-status"
                     alt="Sent successfully"
                     title="Sent successfully"
-                    src="/src/assets/message-sent.png"
+                    src="/assets/message-sent.png"
                 />
             )
         }
@@ -25,7 +25,7 @@ export default function Message({ message }) {
                 className="message__sent-status"
                 alt="Message pending"
                 title="Message pending"
-                src="/src/assets/message-pending.png"
+                src="/assets/message-pending.png"
             />
         )
     }
@@ -38,7 +38,7 @@ export default function Message({ message }) {
                         className="message__unverified-error__image"
                         alt="Error: "
                         title="Failed to verify authenticity"
-                        src="/src/assets/error.png"
+                        src="/assets/error.png"
                     />
                     <span>Failed to verify authenticity</span>
                 </div>
