@@ -4,7 +4,7 @@
 
   <h3 align="center">"When you need to speak freely."</h3>
   <p align="center">
-    While the right for privacy is slowly becoming a luxury reserved for the few, Arti Chat brings it back to the many. You can start chatting with your friends or colleagues today without providing any form of Personal Identifiable Information like an email address, name or phone number. A message you send or receive is routed through the Tor network providing a reasonable level of anonymity. Each conversation is peer-to-peer meaning none of your data or messages are stored on a centralized server. Your speech can't be controlled, outlawed or monitored by any hostile adversary or government since Arti Chat is fully decentralized and does not depend on a single server. Thanks to Tor's strong encryption all your conversations are only readable for you and your peer, remaining a secret for everyone else.
+    While the right to privacy is slowly becoming a luxury reserved for the few, Arti Chat brings it back to the many. You can start chatting with your friends or colleagues today without providing any form of Personal Identifiable Information like an email address, name or phone number. A message you send or receive is routed through the Tor network providing a reasonable level of anonymity. Each conversation is peer-to-peer meaning none of your data or messages are stored on a centralized server. Your speech can't be controlled, outlawed or monitored by any hostile adversary or government since Arti Chat is fully decentralized and does not depend on a single server. Thanks to Tor's strong encryption all your conversations are only readable for you and your peer, remaining a secret for everyone else.
   </p>
   <p align="center">
     Arti Chat is free and open-source.
