@@ -57,6 +57,9 @@ curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/34c130bce987
 - [x] Routing over Tor (Arti).
 - [x] ed25519 message signing.
 - [x] Simple GUI.
+- [x] Encrypted local sqlite database.
+- [x] Extensible RPC implementation.
+- [x] IPC between GUI and daemon using Unix sockets.
 - [ ] Refactor code (atm it's more a draft).
 - [ ] Get feedback on code + architecture.
 - [ ] Discuss different possible approaches.
