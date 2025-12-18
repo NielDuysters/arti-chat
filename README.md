@@ -53,6 +53,10 @@ curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/34c130bce987
 ## Roadmap
 
 **Arti Chat - Proof of Concept (current):**
+- [x] Two peers can chat p2p and decentralized.
+- [x] Routing over Tor (Arti).
+- [x] ed25519 message signing.
+- [x] Simple GUI.
 - [ ] Refactor code (atm it's more a draft).
 - [ ] Get feedback on code + architecture.
 - [ ] Discuss different possible approaches.
