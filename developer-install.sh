@@ -114,13 +114,14 @@ echo
 echo
 echo "4. Installing binaries..."
 echo "Installing arti-chat-daemon-bin..."
-rm "$BIN_DIR/arti-chat-daemon-bin"
+rm -f "$BIN_DIR/arti-chat-daemon-bin"
 CARGO_ARTI_CHAT_DAEMON_BIN="$(command -v arti-chat-daemon-bin)"
 if [ ! -x "$CARGO_ARTI_CHAT_DAEMON_BIN" ]; then
     echo "❌ arti-chat-daemon-bin not found in PATH"
     exit 1
 fi
-install -Dm755 "$CARGO_ARTI_CHAT_DAEMON_BIN" "$BIN_DIR/arti-chat-daemon-bin"
+mkdir -p "$BIN_DIR"
+install -m 755 "$CARGO_ARTI_CHAT_DAEMON_BIN" "$BIN_DIR/arti-chat-daemon-bin"
 echo "✅ arti-chat-daemon-bin installed to $BIN_DIR."
 
 echo "Installing arti-chat-desktop-app..."
@@ -130,7 +131,7 @@ case "$OS" in
     Linux)
         echo
         echo "Installing arti-chat-desktop-app (Linux)..."
-        install -Dm755 "$ARTI_CHAT_DESKTOP_APP_BIN" "$BIN_DIR/arti-chat"
+        install -m 755 "$ARTI_CHAT_DESKTOP_APP_BIN" "$BIN_DIR/arti-chat"
         echo "✅ arti-chat-desktop-app installed to $BIN_DIR as arti-chat..."
         ;;
 
