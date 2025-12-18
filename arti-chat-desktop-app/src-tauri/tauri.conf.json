@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "arti-chat-desktop-app",
+  "productName": "Arti Chat",
   "version": "0.1.0",
   "identifier": "com.arti-chat.desktop-app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Arti chat",
+        "title": "Arti Chat",
         "width": 1150,
         "height": 700
       }
