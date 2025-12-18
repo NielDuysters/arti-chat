@@ -37,10 +37,10 @@ There will be no bundles available until an official release. For developers wan
 ### Prerequisites
 
 This project is made in the Rust programming language and Tauri for the GUI. The following development tools are required for installation:
-- Rust ([install guide]([url](https://rust-lang.org/tools/install/)))
+- Rust ([install guide](https://rust-lang.org/tools/install/))
 - Cargo
-- Tauri ([install guide]([url](https://tauri.app/start/create-project/#using-create-tauri-app)))
-- npm ([install guide]([url](https://nodejs.org/en/download/)))
+- Tauri ([install guide](https://tauri.app/start/create-project/#using-create-tauri-app))
+- npm ([install guide](https://nodejs.org/en/download/))
 
 ### Installation script
 
