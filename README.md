@@ -86,4 +86,4 @@ curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/34c130bce987
 
 ## Contribute
 
-What I currently require the most is feedback on my code. Small code-reviews or tips are appreciated!
+I'm interested in receiving feedback on the code and architecture. A small code-review or tips are appreciated!
