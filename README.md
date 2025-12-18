@@ -30,6 +30,13 @@ This is a hobby project still under heavy development. Today Arti Chat is a proo
 
 I am open to feedback.
 
+## Screenshot
+
+<img src="screenshots/chat.png" width="800" />
+
+More screenshots [here](screenshots)!
+
+
 ## Installation
 
 There will be no bundles available until an official release. For developers wanting to experiment or contribute an install script is provided.
@@ -43,6 +50,15 @@ This project is made in the Rust programming language and Tauri for the GUI. The
 - npm ([install guide](https://nodejs.org/en/download/))
 
 ### Installation script
+
+### ⚠️ macOS bug: App keeps loading
+
+Depending on your system's security settings the app is not allowed to launch the daemon or access the system's keyring to store a key
+for database encryption.
+
+Temporary workaround:
+- Execute command `arti-chat-daemon-bin` in your terminal (installed during install script) and open UI.
+- Execute `pkill arti-chat-daemon-bin` to kill the daemon.
 
 Execute the following command in your terminal to run [`developer-install.sh`](developer-install.sh) which is a Bash script. 
 
