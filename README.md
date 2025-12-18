@@ -51,6 +51,12 @@ This project is made in the Rust programming language and Tauri for the GUI. The
 
 ### Installation script
 
+Execute the following command in your terminal to run [`developer-install.sh`](developer-install.sh) which is a Bash script. 
+
+```
+curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/34c130bce98716259c3e72d5f707ad4ddac86776/developer-install.sh | bash
+```
+
 ### ⚠️ macOS bug: App keeps loading
 
 Depending on your system's security settings the app is not allowed to launch the daemon or access the system's keyring to store a key
@@ -59,12 +65,6 @@ for database encryption.
 Temporary workaround:
 - Execute command `arti-chat-daemon-bin` in your terminal (installed during install script) and open UI.
 - Execute `pkill arti-chat-daemon-bin` to kill the daemon.
-
-Execute the following command in your terminal to run [`developer-install.sh`](developer-install.sh) which is a Bash script. 
-
-```
-curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/34c130bce98716259c3e72d5f707ad4ddac86776/developer-install.sh | bash
-```
 
 ## Roadmap
 
