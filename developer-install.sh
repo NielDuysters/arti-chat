@@ -4,17 +4,18 @@ set -euo pipefail
 # User confirmation for install.
 echo "Install steps:"
 echo "  1. Check prerequisites"
-echo "  2. Clone arti-chat repository"
+echo "  2. Clone arti-chat repository to ~/.local/src"
 echo "  3. Build project from source"
-echo "  4. Install binaries in ~/.local/bin"
+echo "  4. Cargo install --path arti-chat-daemon-bin"
+echo "  5. Install binaries in ~/.local/bin"
 echo
-echo "Press Ctrl + C to abort or wait 10 seconds to continue..."
-sleep 10
+echo "Press Ctrl + C to abort or wait 15 seconds to continue..."
+sleep 15
 
 # Check prerequisites.
 echo
 echo
-printf "Checking prerequisites...\n"
+echo "1. Checking prerequisites..."
 require() {
     if (( $# == 1 )); then
         if command -v "$1" >/dev/null 2>&1; then
@@ -42,17 +43,105 @@ require npm
 # Clone repo.
 echo
 echo
-printf "Cloning arti-chat repository...\n"
-REPO_URL="https://github.com/NielDuysters/arti-chat.git"
-REPO_DIR="arti-chat"
+echo "2. Cloning arti-chat repository..."
+REPO="https://github.com/NielDuysters/arti-chat.git"
+SRC_DIR="$HOME/.local/src/arti-chat"
+BIN_DIR="$HOME/.local/bin"
 
-if [ -d "$REPO_DIR" ]; then
-  echo "❌ Directory '$REPO_DIR' already exists."
-  echo "Remove it or run in clean directory."
-  exit 1
+if [ ! -d "$SRC_DIR" ]; then
+    git clone "$REPO" "$SRC_DIR"
+    echo "✅ git clone success"
+else
+    echo "Repo already exists... Pulling latest changes..."
+    git -C "$SRC_DIR" pull --rebase
+    echo "✅ git pull success"
 fi
 
-git clone "$REPO_URL"
-echo "✅ Success"
 
+# Build project.
+echo
+echo
+echo "3. Building project..."
+ARTI_CHAT_DAEMON_BIN="./target/release/arti-chat-daemon-bin"
+ARTI_CHAT_DESKTOP_APP_BIN="./target/release/arti-chat-desktop-app"
+
+cd "$SRC_DIR"
+
+echo
+echo "Building arti-chat-daemon-bin..."
+cargo build --release -p arti-chat-daemon-bin
+if [ ! -x "$ARTI_CHAT_DAEMON_BIN" ]; then
+    echo "❌ Failed to find arti-chat-daemon-bin binary after build..."
+    exit 1
+fi
+echo "✅ arti-chat-daemon-bin build successfully."
+echo "Installing arti-chat-daemon-bin as command..."
+cargo install --path arti-chat-daemon-bin
+if command -v "arti-chat-daemon-bin" >/dev/null 2>&1; then
+    echo "✅ arti-chat-daemon-bin installed as command..."
+else
+    echo "❌ Failed to install arti-chat-daemon-bin as command..."
+    exit 1
+fi
+
+echo
+echo "Building arti-chat-desktop-app..."
+cd arti-chat-desktop-app
+npm install
+cargo tauri build
+cd ..
+if [ ! -x "$ARTI_CHAT_DESKTOP_APP_BIN" ]; then
+    echo "❌ Failed to find arti-chat-desktop-app binary after build..."
+    exit 1
+fi
+echo "✅ arti-chat-desktop-app build successfully."
+
+# Install binaries.
+echo
+echo
+echo "5. Installing binaries..."
+echo "Installing arti-chat-daemon-bin..."
+rm "$BIN_DIR/arti-chat-daemon-bin"
+CARGO_ARTI_CHAT_DAEMON_BIN="$(command -v arti-chat-daemon-bin)"
+if [ ! -x "$CARGO_ARTI_CHAT_DAEMON_BIN" ]; then
+    echo "❌ arti-chat-daemon-bin not found in PATH"
+    exit 1
+fi
+install -Dm755 "$CARGO_ARTI_CHAT_DAEMON_BIN" "$BIN_DIR/arti-chat-daemon-bin"
+echo "✅ arti-chat-daemon-bin installed to $BIN_DIR."
+
+echo "Installing arti-chat-desktop-app..."
+OS="$(uname)"
+
+case "$OS" in
+    Linux)
+        echo
+        echo "Installing arti-chat-desktop-app (Linux)..."
+        install -Dm755 "$ARTI_CHAT_DESKTOP_APP_BIN" "$BIN_DIR/arti-chat"
+        echo "✅ arti-chat-desktop-app installed to $BIN_DIR as arti-chat..."
+        ;;
+
+    Darwin)
+        APP_BUNDLE_DIR="$SRC_DIR/target/release/bundle/macos"
+        APP_BUNDLE="$(ls -d "$APP_BUNDLE_DIR"/*.app 2>/dev/null | head -1)"
+
+        if [ -z "$APP_BUNDLE" ]; then
+          echo "❌ .app bundle not found..."
+          exit 1
+        fi
+
+        echo
+        echo "MacOS build complete..."
+        echo
+        echo "Follow these instructions to install:"
+        echo "The app bundle is located at:"
+        echo "  $APP_BUNDLE"
+        echo
+        echo "To install it, run:"
+        echo
+        echo "  sudo cp -R \"$APP_BUNDLE\" /Applications/"
+        echo
+        echo "Or drag it into Applications manually."
+        ;;
+esac
 
