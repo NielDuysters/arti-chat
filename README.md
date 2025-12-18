@@ -54,7 +54,7 @@ This project is made in the Rust programming language and Tauri for the GUI. The
 Execute the following command in your terminal to run [`developer-install.sh`](developer-install.sh) which is a Bash script. 
 
 ```
-curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/34c130bce98716259c3e72d5f707ad4ddac86776/developer-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/240f33a2916ec29e919b071c458b3a3f55300749/developer-install.sh | bash
 ```
 
 ### ⚠️ macOS bug: App keeps loading
