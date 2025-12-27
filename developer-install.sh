@@ -97,6 +97,14 @@ else
     exit 1
 fi
 
+OS="$(uname)"
+case "$OS" in
+    Darwin)
+        echo "Copying arti-chat-daemon-bin to external tauri binaries..."
+        cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-aarch64-apple-darwin"
+        ;;
+esac
+
 echo
 echo "Building arti-chat-desktop-app..."
 cd arti-chat-desktop-app
@@ -125,7 +133,6 @@ install -m 755 "$CARGO_ARTI_CHAT_DAEMON_BIN" "$BIN_DIR/arti-chat-daemon-bin"
 echo "✅ arti-chat-daemon-bin installed to $BIN_DIR."
 
 echo "Installing arti-chat-desktop-app..."
-OS="$(uname)"
 
 case "$OS" in
     Linux)
