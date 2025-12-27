@@ -1,9 +1,9 @@
 //! List of Remote Procedure Call commands.
 
-use async_trait::async_trait;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 use crate::ipc;
 use crate::model;
+use async_trait::async_trait;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
 /// --- Load contacts ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -15,7 +15,7 @@ pub struct LoadContactsResponse {
 }
 
 impl SendRpcCommand for LoadContacts {}
-impl ReceiveRpcReply<LoadContactsResponse> for LoadContacts {} 
+impl ReceiveRpcReply<LoadContactsResponse> for LoadContacts {}
 
 /// --- Load chat ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -29,7 +29,7 @@ pub struct LoadChatResponse {
 }
 
 impl SendRpcCommand for LoadChat {}
-impl ReceiveRpcReply<LoadChatResponse> for LoadChat {} 
+impl ReceiveRpcReply<LoadChatResponse> for LoadChat {}
 
 /// --- Send message ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -55,7 +55,7 @@ pub struct AddContact {
 }
 
 impl SendRpcCommand for AddContact {}
-impl ReceiveRpcReply<SuccessResponse> for AddContact {} 
+impl ReceiveRpcReply<SuccessResponse> for AddContact {}
 
 /// --- Update contact ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -66,7 +66,7 @@ pub struct UpdateContact {
 }
 
 impl SendRpcCommand for UpdateContact {}
-impl ReceiveRpcReply<SuccessResponse> for UpdateContact {} 
+impl ReceiveRpcReply<SuccessResponse> for UpdateContact {}
 
 /// --- Load user ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -78,7 +78,7 @@ pub struct LoadUserResponse {
 }
 
 impl SendRpcCommand for LoadUser {}
-impl ReceiveRpcReply<LoadUserResponse> for LoadUser {} 
+impl ReceiveRpcReply<LoadUserResponse> for LoadUser {}
 
 /// --- Update user ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -88,7 +88,7 @@ pub struct UpdateUser {
 }
 
 impl SendRpcCommand for UpdateUser {}
-impl ReceiveRpcReply<SuccessResponse> for UpdateUser {} 
+impl ReceiveRpcReply<SuccessResponse> for UpdateUser {}
 
 /// --- Delete contact messages ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -97,7 +97,7 @@ pub struct DeleteContactMessages {
 }
 
 impl SendRpcCommand for DeleteContactMessages {}
-impl ReceiveRpcReply<SuccessResponse> for DeleteContactMessages {} 
+impl ReceiveRpcReply<SuccessResponse> for DeleteContactMessages {}
 
 /// --- Delete contact ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -106,21 +106,21 @@ pub struct DeleteContact {
 }
 
 impl SendRpcCommand for DeleteContact {}
-impl ReceiveRpcReply<SuccessResponse> for DeleteContact {} 
+impl ReceiveRpcReply<SuccessResponse> for DeleteContact {}
 
 /// --- Reset Tor circuit ---
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct ResetTorCircuit {}
 
 impl SendRpcCommand for ResetTorCircuit {}
-impl ReceiveRpcReply<SuccessResponse> for ResetTorCircuit {} 
+impl ReceiveRpcReply<SuccessResponse> for ResetTorCircuit {}
 
 /// --- Delete all contacts ---
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct DeleteAllContacts {}
 
 impl SendRpcCommand for DeleteAllContacts {}
-impl ReceiveRpcReply<SuccessResponse> for DeleteAllContacts {} 
+impl ReceiveRpcReply<SuccessResponse> for DeleteAllContacts {}
 
 /// --- Send app focus state ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -142,7 +142,7 @@ pub struct GetConfigValueResponse {
 }
 
 impl SendRpcCommand for GetConfigValue {}
-impl ReceiveRpcReply<GetConfigValueResponse> for GetConfigValue {} 
+impl ReceiveRpcReply<GetConfigValueResponse> for GetConfigValue {}
 
 /// --- Set config value ---
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -158,14 +158,14 @@ impl SendRpcCommand for SetConfigValue {}
 pub struct PingHiddenService {}
 
 impl SendRpcCommand for PingHiddenService {}
-impl ReceiveRpcReply<SuccessResponse> for PingHiddenService {} 
+impl ReceiveRpcReply<SuccessResponse> for PingHiddenService {}
 
 /// --- Ping daemon ---
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct PingDaemon {}
 
 impl SendRpcCommand for PingDaemon {}
-impl ReceiveRpcReply<SuccessResponse> for PingDaemon {} 
+impl ReceiveRpcReply<SuccessResponse> for PingDaemon {}
 
 /// Trait to send types as RPC command.
 #[async_trait]
@@ -173,10 +173,7 @@ pub trait SendRpcCommand: Sized + serde::Serialize {
     async fn send(&self) -> anyhow::Result<tokio::net::UnixStream> {
         // Helper method to get command name from type.
         fn cmd_name<T>() -> &'static str {
-            std::any::type_name::<T>()
-                .rsplit("::")
-                .next()
-                .unwrap()
+            std::any::type_name::<T>().rsplit("::").next().unwrap()
         }
 
         // Make connection to RPC socket.
@@ -184,20 +181,20 @@ pub trait SendRpcCommand: Sized + serde::Serialize {
             ipc::SocketPaths::RPC,
             2,
             tokio::time::Duration::from_millis(1000),
-        ).await?;
+        )
+        .await?;
 
         // Craft RPC command.
         let value = serde_json::to_value(self)?;
-        let mut rpc_cmd = value.as_object()
+        let mut rpc_cmd = value
+            .as_object()
             .ok_or_else(|| anyhow::anyhow!("RPC command must serialize to a JSON object"))?
             .clone();
         rpc_cmd.insert("cmd".into(), cmd_name::<Self>().into());
         let rpc_json = serde_json::to_string(&rpc_cmd)? + "\n";
 
         // Write to RPC stream.
-        stream
-            .write_all(rpc_json.as_bytes())
-            .await?;
+        stream.write_all(rpc_json.as_bytes()).await?;
         stream.flush().await.ok();
 
         Ok(stream)
@@ -207,7 +204,9 @@ pub trait SendRpcCommand: Sized + serde::Serialize {
 /// Trait to receive reply of RPC command.
 #[async_trait]
 pub trait ReceiveRpcReply<R>: SendRpcCommand
-where R: serde::de::DeserializeOwned {
+where
+    R: serde::de::DeserializeOwned,
+{
     async fn receive(&self) -> anyhow::Result<R> {
         // Send RPC call.
         let stream = self.send().await?;
