@@ -97,27 +97,6 @@ else
     exit 1
 fi
 
-OS="$(uname)"
-echo "Copying arti-chat-daemon-bin to external tauri binaries..."
-rm -rf "arti-chat-desktop-app/src-tauri/binaries"
-mkdir "arti-chat-desktop-app/src-tauri/binaries"
-case "$OS" in
-    Linux)
-        cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-x86_64-unknown-linux-gnu"
-        ;;
-    Darwin)
-        APPLE_CHIP="$(uname -m)"
-        case "$APPLE_CHIP" in
-            arm64)
-                cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-aarch64-apple-darwin"
-                ;;
-            x86_64)
-                cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-x86_64-apple-darwin"
-                ;;
-        esac
-        ;;
-esac
-
 echo
 echo "Building arti-chat-desktop-app..."
 cd arti-chat-desktop-app
@@ -129,6 +108,19 @@ if [ ! -x "$ARTI_CHAT_DESKTOP_APP_BIN" ]; then
     exit 1
 fi
 echo "✅ arti-chat-desktop-app build successfully."
+
+# Instaling launch agent for daemon.
+OS="$(uname)"
+
+echo
+echo "Installing launch agent for daemon..."
+case "$OS" in
+    Darwin)
+        rm -f "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
+        cp "arti-chat-daemon-bin/resources/com.arti-chat.daemon.plist" "$HOME/Library/LaunchAgents/"
+        sed -i '' "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
+        ;;
+esac
 
 # Install binaries.
 echo
