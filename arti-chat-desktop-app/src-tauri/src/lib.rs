@@ -14,7 +14,6 @@ static APP_FOCUSED: AtomicBool = AtomicBool::new(true);
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .on_window_event(|_, event| match event {
             // Update focus state when user changes focus or closes app.
@@ -33,7 +32,7 @@ pub fn run() {
 
             // Separate async task to receive messages from broadcast.
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = ipc::launch_daemon(app_handle.clone()).await {
+                if let Err(e) = ipc::launch_daemon().await {
                     tracing::error!("launch_daemon failed: {e}");
                     return;
                 }

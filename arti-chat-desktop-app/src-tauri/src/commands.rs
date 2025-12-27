@@ -2,7 +2,6 @@ use crate::model;
 use crate::rpc;
 use crate::rpc::ReceiveRpcReply;
 use crate::rpc::SendRpcCommand;
-use tauri_plugin_shell::ShellExt;
 
 #[tauri::command]
 pub async fn load_contacts() -> Result<Vec<model::Contact>, String> {
@@ -168,19 +167,6 @@ pub async fn ping_daemon() -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn restart_daemon(app_handle: tauri::AppHandle) -> Result<(), String> {
-    let app_shell = app_handle.shell();
-    
-    let _ = app_shell.command("pkill")
-        .args(["arti-chat-daemon-bin"])
-        .status()
-        .await;
-
-    app_shell
-        .sidecar("arti-chat-daemon-bin")
-        .map_err(|e| format!("failed to sidecar arti-chat-daemin-bin: {e}"))?
-        .spawn()
-        .map_err(|e| format!("Failed to restart daemon: {e}"))?;
-
+pub async fn restart_daemon() -> Result<(), String> {
     Ok(())
 }
