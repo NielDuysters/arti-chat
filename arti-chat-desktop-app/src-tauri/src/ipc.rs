@@ -1,6 +1,7 @@
 //! Logic to make the desktop UI communicate with the daemon using Inter-process communication.
 
 use crate::error;
+use tauri_plugin_shell::ShellExt;
 
 pub struct SocketPaths;
 impl SocketPaths {
@@ -23,14 +24,20 @@ pub async fn get_socket_stream(
     anyhow::bail!(error::DesktopUiError::SocketTimeout);
 }
 
-pub async fn launch_daemon() -> anyhow::Result<()> {
-    match get_socket_stream(SocketPaths::BROADCAST, 5, tokio::time::Duration::from_millis(2000)).await {
+pub async fn launch_daemon(app_handle: tauri::AppHandle) -> anyhow::Result<()> {
+    let app_shell = app_handle.shell();
+
+    match get_socket_stream(
+        SocketPaths::BROADCAST,
+        5,
+        tokio::time::Duration::from_millis(2000),
+    )
+    .await
+    {
         Ok(_) => return Ok(()),
-        Err(_) => {
-            match std::process::Command::new("arti-chat-daemon-bin").spawn() {
-                Ok(_) => return Ok(()),
-                Err(_) => anyhow::bail!(error::DesktopUiError::DaemonStartFailure),
-            }
-        }
+        Err(_) => match app_shell.sidecar("arti-chat-daemon-bin")?.spawn() {
+            Ok(_) => return Ok(()),
+            Err(_) => anyhow::bail!(error::DesktopUiError::DaemonStartFailure),
+        },
     }
 }

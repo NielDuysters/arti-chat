@@ -28,4 +28,5 @@ thiserror = "2.0.17"
 tracing = "0.1.43"
 tracing-subscriber = "0.3.22"
 async-trait = "0.1.89"
+tauri-plugin-shell = "2"
 

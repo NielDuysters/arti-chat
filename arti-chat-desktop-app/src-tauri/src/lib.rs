@@ -14,6 +14,7 @@ static APP_FOCUSED: AtomicBool = AtomicBool::new(true);
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .on_window_event(|_, event| match event {
             // Update focus state when user changes focus or closes app.
@@ -22,7 +23,7 @@ pub fn run() {
             }
             tauri::WindowEvent::CloseRequested { .. } => {
                 tauri::async_runtime::spawn(async move {
-                    let _ = commands::send_focus_state(false).await; 
+                    let _ = commands::send_focus_state(false).await;
                 });
             }
             _ => {}
@@ -32,7 +33,7 @@ pub fn run() {
 
             // Separate async task to receive messages from broadcast.
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = ipc::launch_daemon().await {
+                if let Err(e) = ipc::launch_daemon(app_handle.clone()).await {
                     tracing::error!("launch_daemon failed: {e}");
                     return;
                 }
@@ -43,7 +44,8 @@ pub fn run() {
                         20,
                         tokio::time::Duration::from_millis(1000),
                     )
-                    .await {
+                    .await
+                    {
                         Ok(s) => s,
                         Err(e) => {
                             tracing::error!("broadcast socket failed: {e}");
@@ -91,4 +93,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
