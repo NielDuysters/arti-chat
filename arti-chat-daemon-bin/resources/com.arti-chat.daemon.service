@@ -1,0 +1,16 @@
+[Unit]
+Description=Arti Chat Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%BIN_DIR%/arti-chat-daemon-bin
+Restart=always
+RestartSec=1
+
+# Optional but recommended
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
