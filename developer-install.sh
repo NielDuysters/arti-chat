@@ -120,6 +120,15 @@ case "$OS" in
         cp "arti-chat-daemon-bin/resources/com.arti-chat.daemon.plist" "$HOME/Library/LaunchAgents/"
         sed -i '' "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
         ;;
+    Linux)
+        rm -f "$HOME/.config/systemd/user/com.arti-chat.daemon.service"
+        cp "arti-chat-daemon-bin/resources/com.arti-chat.daemon.service" "$HOME/.config/systemd/user/"
+        sed -i '' "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/.config/systemd/user/com.arti-chat.daemon.service"
+
+        systemctl --user daemon-reexec
+        systemctl --user daemon-reload
+        systemctl --user enable --now "com.arti-chat.daemon.service"
+        ;;
 esac
 
 # Install binaries.
