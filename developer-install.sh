@@ -98,10 +98,23 @@ else
 fi
 
 OS="$(uname)"
+echo "Copying arti-chat-daemon-bin to external tauri binaries..."
+rm -rf "arti-chat-desktop-app/src-tauri/binaries"
+mkdir "arti-chat-desktop-app/src-tauri/binaries"
 case "$OS" in
+    Linux)
+        cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-x86_64-unknown-linux-gnu"
+        ;;
     Darwin)
-        echo "Copying arti-chat-daemon-bin to external tauri binaries..."
-        cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-aarch64-apple-darwin"
+        APPLE_CHIP="$(uname -m)"
+        case "$APPLE_CHIP" in
+            arm64)
+                cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-aarch64-apple-darwin"
+                ;;
+            x86_64)
+                cp "$ARTI_CHAT_DAEMON_BIN" "arti-chat-desktop-app/src-tauri/binaries/arti-chat-daemon-bin-x86_64-apple-darwin"
+                ;;
+        esac
         ;;
 esac
 
