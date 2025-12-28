@@ -126,7 +126,7 @@ case "$OS" in
         mkdir -p "$HOME/.config/systemd/user/"
         rm -f "$HOME/.config/systemd/user/com.arti-chat.daemon.service"
         cp "arti-chat-daemon-bin/resources/com.arti-chat.daemon.service" "$HOME/.config/systemd/user/"
-        sed -i '' "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/.config/systemd/user/com.arti-chat.daemon.service"
+        sed -i "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/.config/systemd/user/com.arti-chat.daemon.service"
 
         systemctl --user daemon-reexec
         systemctl --user daemon-reload
