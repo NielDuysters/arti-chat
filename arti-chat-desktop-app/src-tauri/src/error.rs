@@ -9,4 +9,7 @@ pub enum DesktopUiError {
     
     #[error("Daemon couldn't launch.")]
     DaemonStartFailure,
+    
+    #[error("Unsupported operating system.")]
+    UnsupportedOperatingSystem,
 }

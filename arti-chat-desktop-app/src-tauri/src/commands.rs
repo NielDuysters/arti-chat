@@ -168,5 +168,26 @@ pub async fn ping_daemon() -> Result<bool, String> {
 
 #[tauri::command]
 pub async fn restart_daemon() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        let uid = nix::unistd::Uid::current();
+        std::process::Command::new("launchctl")
+            .args([
+                "kickstart",
+                "-k",
+                &format!("gui/{}/com.arti-chat.daemon", uid),
+            ])
+            .spawn()
+            .map_err(|e| format!("Failed to restart daemon: {e}"))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("systemctl")
+            .args(["--user", "restart", "com.arti-chat.daemon.service"])
+            .spawn()
+            .map_err(|e| format!("Failed to restart daemon: {e}"))?;
+    }
+
     Ok(())
 }

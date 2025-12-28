@@ -24,13 +24,20 @@ pub async fn get_socket_stream(
 }
 
 pub async fn launch_daemon() -> anyhow::Result<()> {
-    match get_socket_stream(SocketPaths::BROADCAST, 5, tokio::time::Duration::from_millis(2000)).await {
+    if get_socket_stream(SocketPaths::BROADCAST, 5, tokio::time::Duration::from_millis(2000)).await.is_ok() {
+        return Ok(());
+    }
+
+    let launch_status = if cfg!(target_os = "macos") {
+        std::process::Command::new("launchctl").args(["start", "com.arti-chat.daemon"]).spawn()
+    } else if cfg!(target_os = "linux") {
+        std::process::Command::new("systemctl").args(["--user", "start", "com.arti-chat.daemon.service"]).spawn()
+    } else {
+        anyhow::bail!(error::DesktopUiError::UnsupportedOperatingSystem);
+    };
+
+    match launch_status {
         Ok(_) => return Ok(()),
-        Err(_) => {
-            match std::process::Command::new("launchctl").args(["start", "com.arti-chat.daemon"]).spawn() {
-                Ok(_) => return Ok(()),
-                Err(_) => anyhow::bail!(error::DesktopUiError::DaemonStartFailure),
-            }
-        }
+        Err(_) => anyhow::bail!(error::DesktopUiError::DaemonStartFailure),
     }
 }
