@@ -67,6 +67,7 @@ if [ ! -d "$SRC_DIR" ]; then
     echo "✅ git clone success"
 else
     echo "Repo already exists... Pulling latest changes..."
+    git -C "$SRC_DIR" reset --hard
     git -C "$SRC_DIR" pull --rebase
     echo "✅ git pull success"
 fi
