@@ -155,9 +155,55 @@ echo "Installing arti-chat-desktop-app..."
 case "$OS" in
     Linux)
         echo
-        echo "Installing arti-chat-desktop-app (Linux)..."
-        install -m 755 "$ARTI_CHAT_DESKTOP_APP_BIN" "$BIN_DIR/arti-chat"
-        echo "✅ arti-chat-desktop-app installed to $BIN_DIR as arti-chat..."
+        echo "✅ Linux build complete for arti-chat-desktop-app."
+        echo
+
+        DEB_DIR="$SRC_DIR/target/release/bundle/deb"
+        RPM_DIR="$SRC_DIR/target/release/bundle/rpm"
+        APPIMAGE_DIR="$SRC_DIR/target/release/bundle/appimage"
+
+        DEB_PKG="$(ls -1 "$DEB_DIR"/*.deb 2>/dev/null | head -1)"
+        RPM_PKG="$(ls -1 "$RPM_DIR"/*.rpm 2>/dev/null | head -1)"
+        APPIMAGE_PKG="$(ls -1 "$APPIMAGE_DIR"/*.AppImage 2>/dev/null | head -1)"
+
+        if [ -n "$DEB_PKG" ]; then
+            echo "📦 Debian/Ubuntu package found:"
+            echo "  $DEB_PKG"
+            echo
+            echo "To install on Debian/Ubuntu:"
+            echo
+            echo "  sudo apt install \"$DEB_PKG\""
+            echo
+        fi
+
+        if [ -n "$RPM_PKG" ]; then
+            echo "📦 RPM package found:"
+            echo "  $RPM_PKG"
+            echo
+            echo "To install on Fedora/RHEL/openSUSE:"
+            echo
+            echo "  sudo dnf install \"$RPM_PKG\""
+            echo
+        fi
+
+        if [ -n "$APPIMAGE_PKG" ]; then
+            echo "📦 AppImage found:"
+            echo "  $APPIMAGE_PKG"
+            echo
+            echo "To run:"
+            echo
+            echo "  chmod +x \"$APPIMAGE_PKG\""
+            echo "  \"$APPIMAGE_PKG\""
+            echo
+            echo "Note: AppImages do NOT auto-install launcher entries."
+            echo "      Use AppImageLauncher or create a .desktop file if desired."
+            echo
+        fi
+
+        if [ -z "$DEB_PKG" ] && [ -z "$RPM_PKG" ] && [ -z "$APPIMAGE_PKG" ]; then
+            echo "❌ No Linux bundles found."
+            exit 1
+        fi
         ;;
 
     Darwin)
@@ -170,7 +216,7 @@ case "$OS" in
         fi
 
         echo
-        echo "MacOS build complete..."
+        echo "✅ MacOS build complete..."
         echo
         echo "Follow these instructions to install:"
         echo "The app bundle is located at:"
