@@ -121,6 +121,9 @@ case "$OS" in
         rm -f "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
         cp "arti-chat-daemon-bin/resources/com.arti-chat.daemon.plist" "$HOME/Library/LaunchAgents/"
         sed -i '' "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
+
+        launchctl bootout gui/$(id -u)/com.arti-chat.daemon 2>/dev/null
+        launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
         ;;
     Linux)
         mkdir -p "$HOME/.config/systemd/user/"
