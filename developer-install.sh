@@ -7,7 +7,8 @@ echo "  1. Check prerequisites"
 echo "  2. Clone arti-chat repository to ~/.local/src"
 echo "  3. Build project from source"
 echo "   3a. Cargo install --path arti-chat-daemon-bin"
-echo "  4. Install binaries in ~/.local/bin"
+echo "  4. Install launch agent/systemd service for daemon"
+echo "  5. Install binaries in ~/.local/bin"
 echo
 echo "Press Ctrl + C to abort or wait 15 seconds to continue..."
 sleep 15
@@ -111,9 +112,9 @@ echo "✅ arti-chat-desktop-app build successfully."
 
 # Instaling launch agent for daemon.
 OS="$(uname)"
-
 echo
-echo "Installing launch agent for daemon..."
+echo
+echo "4. Installing launch agent for daemon..."
 case "$OS" in
     Darwin)
         rm -f "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
@@ -121,6 +122,7 @@ case "$OS" in
         sed -i '' "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/Library/LaunchAgents/com.arti-chat.daemon.plist"
         ;;
     Linux)
+        mkdir -p "$HOME/.config/systemd/user/"
         rm -f "$HOME/.config/systemd/user/com.arti-chat.daemon.service"
         cp "arti-chat-daemon-bin/resources/com.arti-chat.daemon.service" "$HOME/.config/systemd/user/"
         sed -i '' "s|%BIN_DIR%|$BIN_DIR|g" "$HOME/.config/systemd/user/com.arti-chat.daemon.service"
@@ -130,11 +132,12 @@ case "$OS" in
         systemctl --user enable --now "com.arti-chat.daemon.service"
         ;;
 esac
+echo "✅ Launch agent installed."
 
 # Install binaries.
 echo
 echo
-echo "4. Installing binaries..."
+echo "5. Installing binaries..."
 echo "Installing arti-chat-daemon-bin..."
 rm -f "$BIN_DIR/arti-chat-daemon-bin"
 CARGO_ARTI_CHAT_DAEMON_BIN="$(command -v arti-chat-daemon-bin)"
