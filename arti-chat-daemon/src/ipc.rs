@@ -1,20 +1,18 @@
 //! Logic to communicate between the daemon and the desktop app using Inter-process communication.
 
-use crate::{client, db::{self, DbModel}, error::IpcError, rpc::{self, SendRpcReply}};
-use futures::io::WriteHalf;
+use crate::{client, error::IpcError, rpc};
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
-    net::{UnixListener, UnixStream},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::UnixListener,
     net::unix::{OwnedReadHalf, OwnedWriteHalf},
-    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
-    time::{timeout, Duration},
+    sync::mpsc::{self, UnboundedSender},
 };
 use tokio::sync::Mutex as TokioMutex;
 
-type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
-
 /// Possible paths for UnixSockets.
+#[non_exhaustive]
 pub struct SocketPaths;
+
 impl SocketPaths {
     /// Socket for RPC (send + reply).
     pub const RPC: &str = "/tmp/arti-chat.rpc.sock";
@@ -24,10 +22,11 @@ impl SocketPaths {
 }
 
 /// Type of message to UI.
+#[non_exhaustive]
 pub enum MessageToUI {
-    // Broadcast.
+    /// Broadcast.
     Broadcast(String),
-    // RPC command.
+    /// RPC command.
     Rpc(String),
 }
 
@@ -130,7 +129,7 @@ pub async fn run_ipc_server(
     }
 } 
 
-// Writes to UI whenever daemon demands it.
+/// Writes to UI whenever daemon demands it.
 async fn ui_write_loop(
     mut rx: mpsc::UnboundedReceiver<MessageToUI>,   // Receives messages pushed by daemon.
     mut write_half: OwnedWriteHalf,                 // Writer handle to UI.
@@ -148,7 +147,7 @@ async fn ui_write_loop(
     }
 }
 
-// Handle a RPC call coming from the UI.
+/// Handle a RPC call coming from the UI.
 async fn handle_rpc_call(
     read_half: OwnedReadHalf,                               // Read incoming RPC call.
     tx_rpc: UnboundedSender<MessageToUI>,                   // Reply to current RPC call.

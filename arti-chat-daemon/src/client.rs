@@ -6,14 +6,18 @@ use crate::{db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI},
 use ed25519_dalek::{SigningKey, VerifyingKey, PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH};
 use futures::{AsyncReadExt, AsyncWriteExt, Stream, StreamExt};
 use notify_rust::Notification;
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::Mutex as TokioMutex;
 use tor_cell::relaycell::msg::Connected;
 use tor_proto::client::stream::IncomingStreamRequest;
 
+/// Type for TorClient with runtime.
 type ArtiTorClient = arti_client::TorClient<tor_rtcompat::PreferredRuntime>;
+/// Type for hidden service request stream behind boxed smart pointer.
 type OnionServiceRequestStream = Box<dyn Stream<Item = tor_hsservice::RendRequest> + Send>;
+/// Type for thread-safe database connection.
 type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
+/// Type for thread-safe ClientConfig.
 type ClientConfigType = std::sync::Arc<TokioMutex<ClientConfig>>; 
 
 /// Encapsulates hidden service, database connection,...
@@ -36,12 +40,10 @@ pub struct Client {
 
     /// Private key of user to sign chat messages.
     private_key: SigningKey,
-
-    /// Public key of user to verify received chat messages.
-    public_key: VerifyingKey,
 }
 
 /// Client configuration from database.
+#[non_exhaustive]
 pub struct ClientConfig {
     /// Enable/disable notifications.
     pub enable_notifications: bool,
@@ -56,7 +58,7 @@ impl ClientConfig {
     }
 
     /// Get config value.
-    pub fn get(&self, key: ClientConfigKey) -> String {
+    pub fn get(&self, key: &ClientConfigKey) -> String {
         match key {
             ClientConfigKey::EnableNotifications => self.enable_notifications.to_string(),
         }
@@ -64,15 +66,19 @@ impl ClientConfig {
 }
 
 /// Possible config keys.
+#[non_exhaustive]
 pub enum ClientConfigKey {
+    /// Setting for desktop notifications for incoming messages.
     EnableNotifications,
 }
 
-impl ClientConfigKey {
-    pub fn from_str(s: &str) -> Option<Self> {
+impl std::str::FromStr for ClientConfigKey {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "enable_notifications" => Some(Self::EnableNotifications),
-            _ => None,
+            "enable_notifications" => Ok(Self::EnableNotifications),
+            _ => Err(()),
         }
     }
 }
@@ -89,7 +95,7 @@ impl Client {
         let request_stream = TokioMutex::new(Box::into_pin(request_stream));
 
         // Generate new keypair.
-        let (private_key, public_key) = Self::generate_keypair()?;
+        let (private_key, public_key) = Self::generate_keypair();
 
         // Store user with newly generated keypair.
         // Note that if the user with the given onion_id already exists
@@ -104,7 +110,7 @@ impl Client {
 
         // Retrieve user again to get actual stored keypair.
         let user: db::UserDb = db::UserDb::retrieve(&onion_id, db_conn.clone()).await?;
-        let (private_key, public_key) = Self::get_validated_keypair(&user.private_key, &user.public_key)?;
+        let (private_key, _public_key) = Self::get_validated_keypair(&user.private_key, &user.public_key)?;
 
         tracing::info!("ArtiChat client launched.");
         Ok(Self {
@@ -114,7 +120,6 @@ impl Client {
             onion_service,
             request_stream,
             private_key,
-            public_key,
         })
     }
 
@@ -191,6 +196,7 @@ impl Client {
 
                     #[derive(serde::Serialize)]
                     struct SendIncomingMessage {
+                        /// HsId from peer we received this message from.
                         pub onion_id: String,
                     }
                     let incoming_message = SendIncomingMessage { onion_id: msg.contact_onion_id.to_string() };
@@ -257,6 +263,7 @@ impl Client {
         }
     }
 
+    /// Bootstrap connection to Tor network and return client.
     async fn bootstrap_tor_client() -> Result<ArtiTorClient, error::ClientError> {
         let config = arti_client::TorClientConfig::default();
         let client = arti_client::TorClient::create_bootstrapped(config).await?;
@@ -266,6 +273,7 @@ impl Client {
         Ok(client)
     }
 
+    /// Launch our hidden service.
     async fn launch_onion_service(client: &ArtiTorClient)
     -> Result<(
         std::sync::Arc<tor_hsservice::RunningOnionService>,
@@ -288,14 +296,15 @@ impl Client {
         Ok((onion_service, request_stream))
     }
 
+    /// Show HsId of hidden service.
     fn get_identity_unredacted_inner(onion_address: Option<arti_client::HsId>) -> Result<String, error::ClientError> {
         onion_address
             .ok_or(error::ClientError::EmptyHsid)
             .map(|address| safelog::DispUnredacted(address).to_string())
     }
 
-    // Generate + store keypair to sign and verify chat messages.
-    fn generate_keypair() -> Result<(String, String), error::ClientError> 
+    /// Generate + store keypair to sign and verify chat messages.
+    fn generate_keypair() -> (String, String) 
     {
         // Generate new keypair.
         let private_key = SigningKey::generate(&mut rand_core::OsRng);
@@ -304,10 +313,10 @@ impl Client {
         let public_key = hex::encode(public_key);
         let private_key = hex::encode(private_key);
 
-        Ok((private_key, public_key))
+        (private_key, public_key)
     }
 
-    // Get keypair from user and return if valid.
+    /// Get keypair from user and return if valid.
     fn get_validated_keypair(private_key: &str, public_key: &str) -> Result<(SigningKey, VerifyingKey), error::ClientError> {
         let private_key_b = hex::decode(private_key)?;
         let public_key_b = hex::decode(public_key)?;
@@ -316,8 +325,8 @@ impl Client {
             return Err(error::ClientError::InvalidKeyLength);
         }
 
-        let mut private_key = [0u8; SECRET_KEY_LENGTH];
-        let mut public_key = [0u8; PUBLIC_KEY_LENGTH];
+        let mut private_key = [0_u8; SECRET_KEY_LENGTH];
+        let mut public_key = [0_u8; PUBLIC_KEY_LENGTH];
         private_key.copy_from_slice(&private_key_b);
         public_key.copy_from_slice(&public_key_b);
 
@@ -327,7 +336,7 @@ impl Client {
         ))
     }
 
-    // Handle request from client to open new stream to our onion service.
+    /// Handle request from client to open new stream to our onion service.
     async fn handle_request(
         request: tor_hsservice::StreamRequest,
         message_tx: tokio::sync::mpsc::UnboundedSender<String>,  // Used to send incoming messages
@@ -345,18 +354,14 @@ impl Client {
                 // Read buffer.
                 let mut read_buffer = std::vec::Vec::new();
                 // We read stream byte-by-byte to handle bug in Arti with EndReason::Misc error.
-                let mut byte = [0u8; 1];
+                let mut byte = [0_u8; 1];
 
-                loop {
-                    if let Ok(_) = stream.read_exact(&mut byte).await {
-                        // We expect each message to end with a null-byte.
-                        if byte[0] == 0 {
-                            break;
-                        }
-                        read_buffer.push(byte[0]);
-                    } else {
+                while stream.read_exact(&mut byte).await.is_ok() {
+                    // We expect each message to end with a null-byte.
+                    if byte[0] == 0 {
                         break;
                     }
+                    read_buffer.push(byte[0]);
                 }
 
                 if read_buffer.is_empty() {

@@ -2,6 +2,11 @@
 name = "arti-chat-daemon-bin"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+keywords = ["tor", "arti", "privacy", "anonymity", "chat", "messenger"]
+description = "Binary wrapping daemon library for Arti Chat"
+categories = ["chat", "messaging"]
+repository = "https://github.com/NielDuysters/arti-chat.git"
 
 [dependencies]
 anyhow = "1.0.100"

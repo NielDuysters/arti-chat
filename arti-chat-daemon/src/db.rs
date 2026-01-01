@@ -10,6 +10,7 @@ use tokio::sync::Mutex as TokioMutex;
 pub type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
 
 /// Primary key (after insert) can be of type can be String (onion_id) or int (id).
+#[non_exhaustive]
 pub enum PrimaryKey<'a> {
     /// Caller knows PK at insert.
     Provided(&'a str),
@@ -19,6 +20,7 @@ pub enum PrimaryKey<'a> {
 }
 
 /// InsertID can be Integer or Text.
+#[non_exhaustive]
 pub enum InsertId {
     /// Text.
     Text(String),
@@ -39,7 +41,7 @@ impl InsertId {
 
 /// Create database tables + return connection.
 pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection, error::DatabaseError> {
-    let conn = Connection::open(database_path(project_dir)?)?;
+    let conn = Connection::open(database_path(&project_dir))?;
 
     let db_key = retrieve_db_encryption_key()?; 
     conn.pragma_update(None, "key", &db_key)?;
@@ -98,6 +100,7 @@ pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection
 // --- User ---
 
 /// Represents row in user table.
+#[non_exhaustive]
 #[derive(serde::Serialize)]
 pub struct UserDb {
     /// Column onion_id.
@@ -114,6 +117,7 @@ pub struct UserDb {
 }
 
 /// Type allowing to update user.
+#[non_exhaustive]
 #[derive(serde::Serialize)]
 pub struct UpdateUserDb {
     /// PK of user to update.
@@ -168,6 +172,7 @@ impl DbUpdateModel<UserDb> for UpdateUserDb {
 // --- Contact ---
 
 /// Represents row in contact table.
+#[non_exhaustive]
 #[derive(serde::Serialize, Debug)]
 pub struct ContactDb {
     /// Column onion_id.
@@ -190,6 +195,7 @@ pub struct ContactDb {
 }
 
 /// Type allowing to update a contact.
+#[non_exhaustive]
 #[derive(serde::Serialize)]
 pub struct UpdateContactDb {
     /// PK of contact to update.
@@ -239,7 +245,7 @@ impl ContactDb {
         );
 
         let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt.query_map([], |row| Ok(Self::from_row(row)?))?;
+        let rows = stmt.query_map([], Self::from_row)?;
 
         let mut results = Vec::new();
         for row in rows {
@@ -295,6 +301,7 @@ impl DbUpdateModel<ContactDb> for UpdateContactDb {
 // --- Message ---
 
 /// Represents row in message table.
+#[non_exhaustive]
 #[derive(serde::Serialize)]
 pub struct MessageDb {
     /// PK Id of message.
@@ -320,6 +327,7 @@ pub struct MessageDb {
 }
 
 /// Type allowing to update a message.
+#[non_exhaustive]
 #[derive(serde::Serialize)]
 pub struct UpdateMessageDb {
     /// PK of message to update.
@@ -393,7 +401,7 @@ impl MessageDb {
         )?;
         
         let rows = stmt.query_map(params![onion_id], |row| {
-            Ok(Self::from_row(row)?)
+            Self::from_row(row)
         })?;
 
         let mut results = Vec::new();
@@ -423,7 +431,7 @@ impl MessageDb {
         )?;
         
         let rows = stmt.query_map([], |row| {
-            Ok(Self::from_row(row)?)
+            Self::from_row(row)
         })?;
 
         let mut results = Vec::new();
@@ -436,6 +444,7 @@ impl MessageDb {
 }
 
 /// Type to get and set configuration.
+#[non_exhaustive]
 pub struct ConfigDb;
 
 impl ConfigDb {
@@ -543,7 +552,7 @@ pub trait DbModel : Sized {
         let conn = conn.lock().await;
         let sql = format!("SELECT * FROM {} WHERE onion_id = ?", Self::table());
 
-        Ok(conn.query_row(&sql, [onion_id], |row| Self::from_row(row))?)
+        Ok(conn.query_row(&sql, [onion_id], Self::from_row)?)
     }
 
     /// Default select all behavior.
@@ -561,7 +570,7 @@ pub trait DbModel : Sized {
 
         let mut stmt = conn.prepare(&sql)?;
         let rows = stmt.query_map([], |row| {
-            Ok(Self::from_row(row)?)
+            Self::from_row(row)
         })?;
 
         let mut results = Vec::new();
@@ -643,20 +652,19 @@ pub trait DbUpdateModel<R: DbModel> {
     }
 } 
 
-// Helper method to get path do .db file in project_dir.
-fn database_path(project_dir: std::path::PathBuf) -> Result<std::path::PathBuf, error::DatabaseError> {
-    let path = project_dir.join("arti-chat.db");
-    Ok(path)
+/// Helper method to get path do .db file in project_dir.
+fn database_path(project_dir: &std::path::Path) -> std::path::PathBuf {
+    project_dir.join("arti-chat.db")
 }
 
-// Store/retrieve key for database encryption in OS keychain.
+/// Store/retrieve key for database encryption in OS keychain.
 fn retrieve_db_encryption_key() -> Result<String, error::DatabaseError> {
     let entry = keyring::Entry::new("com.arti-chat.desktop", "db-key")?;
     match entry.get_password() {
         Ok(key) => Ok(key),
         Err(_) => {
             // Generate new key.
-            let mut bytes = [0u8; 32];
+            let mut bytes = [0_u8; 32];
             rand::rng().fill_bytes(&mut bytes);
             let key = hex::encode(bytes);
 

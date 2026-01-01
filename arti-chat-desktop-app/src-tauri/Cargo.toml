@@ -1,9 +1,14 @@
 [package]
 name = "arti-chat-desktop-app"
 version = "0.1.0"
-description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
+license = "MIT"
+keywords = ["tor", "arti", "privacy", "anonymity", "chat", "messenger"]
+description = "Desktop UI for Arti Chat"
+categories = ["chat", "messaging"]
+repository = "https://github.com/NielDuysters/arti-chat.git"
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

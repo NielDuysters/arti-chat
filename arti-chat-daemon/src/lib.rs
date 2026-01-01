@@ -88,6 +88,7 @@ pub async fn run() -> Result<(), error::DaemonError> {
     Ok(())
 }
 
+/// Create project directory if it does not exist yet.
 fn create_project_dir() -> Result<std::path::PathBuf, error::DaemonError> {
     let path = PROJECT_DIR.data_local_dir();
     std::fs::create_dir_all(path)?;

@@ -5,6 +5,7 @@ use ed25519_dalek::ed25519::signature::SignerMut;
 use crate::error::MessageError;
 
 /// Payload of message.
+#[non_exhaustive]
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct MessagePayload {
     /// Onion HsId of the sender.
@@ -18,6 +19,7 @@ pub struct MessagePayload {
 }
 
 /// Signed message payload.
+#[non_exhaustive]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct SignedMessagePayload {
     /// Message payload.
@@ -48,7 +50,7 @@ impl SignedMessagePayload {
         if public_key.len() != ed25519_dalek::PUBLIC_KEY_LENGTH {
             return Err(MessageError::InvalidKeyLength);
         }
-        let mut public_key_array = [0u8; ed25519_dalek::PUBLIC_KEY_LENGTH];
+        let mut public_key_array = [0_u8; ed25519_dalek::PUBLIC_KEY_LENGTH];
         public_key_array.copy_from_slice(&public_key);
         let public_key = ed25519_dalek::VerifyingKey::from_bytes(&public_key_array)?; 
 

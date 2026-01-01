@@ -5,6 +5,7 @@ use thiserror::Error;
 use crate::ipc::MessageToUI;
 
 /// Errors related to daemon.
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum DaemonError {
     /// Error running daemon.
@@ -25,6 +26,7 @@ pub enum DaemonError {
 }
 
 /// Errors related to client.
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum ClientError {
     /// Error in Arti TorClient.
@@ -89,6 +91,7 @@ pub enum ClientError {
 }
 
 /// Errors related to database.
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum DatabaseError {
     /// I/O Error.
@@ -109,6 +112,7 @@ pub enum DatabaseError {
 }
 
 /// Errors related to IPC server.
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum IpcError {
     /// I/O Error.
@@ -121,6 +125,7 @@ pub enum IpcError {
 }
 
 /// Errors related to RPC.
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum RpcError {
     /// I/O Error.
@@ -145,6 +150,7 @@ pub enum RpcError {
 }
 
 /// Errors related to message.
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum MessageError {
     /// Serde Json Error.
