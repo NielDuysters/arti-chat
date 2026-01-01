@@ -1,7 +1,13 @@
 //! Remote Procedure Call commands.
 
+use crate::{
+    client::{self, ClientConfigKey},
+    db::{self, DbModel, DbUpdateModel},
+    error::{self, RpcError},
+    ipc::MessageToUI,
+    ui_focus,
+};
 use async_trait::async_trait;
-use crate::{client::{self, ClientConfigKey}, db::{self, DbModel, DbUpdateModel}, error::{self, RpcError}, ipc::MessageToUI, ui_focus};
 
 /// List of RPC commands.
 #[non_exhaustive]
@@ -34,7 +40,7 @@ pub enum RpcCommand {
         /// Public key of the contact.
         public_key: String,
     },
-    
+
     /// Update an existing contact.
     UpdateContact {
         /// Onion ID of the contact to update.
@@ -44,7 +50,7 @@ pub enum RpcCommand {
         /// Optional new public key for the contact.
         public_key: Option<String>,
     },
-    
+
     /// Load the local user profile.
     LoadUser,
 
@@ -85,7 +91,7 @@ pub enum RpcCommand {
         /// Configuration key to retrieve.
         key: String,
     },
-    
+
     /// Set a configuration value.
     SetConfigValue {
         /// Configuration key to set.
@@ -148,9 +154,12 @@ impl SendRpcReply for GetConfigValueResponse {}
 
 /// Trait to define default behavior to send RPC reply.
 #[async_trait]
-pub trait SendRpcReply : serde::Serialize {
+pub trait SendRpcReply: serde::Serialize {
     /// Send RPC reply.
-    fn send_rpc_reply(&self, tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>) -> Result<(), RpcError> {
+    fn send_rpc_reply(
+        &self,
+        tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+    ) -> Result<(), RpcError> {
         let json = serde_json::to_string(&self)? + "\n";
         tx.send(MessageToUI::Rpc(json))?;
         Ok(())
@@ -167,48 +176,92 @@ impl RpcCommand {
         client: &client::Client,
     ) -> Result<(), RpcError> {
         match self {
-            RpcCommand::LoadContacts =>
-                self.handle_load_contacts(tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::LoadChat { onion_id } =>
-                self.handle_load_chat(onion_id, tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::SendMessage { to, text } => 
-                self.handle_send_message(to, text, tx_broadcast, client).await,
-            RpcCommand::AddContact { nickname, onion_id, public_key } =>
-                self.handle_add_contact(nickname, onion_id, public_key, tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::UpdateContact { onion_id, nickname, public_key } =>
-                self.handle_update_contact(onion_id, nickname.as_deref(), public_key.as_deref(), tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::LoadUser => 
-                self.handle_load_user(&client.get_identity_unredacted()?, tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::UpdateUser { public_key, private_key } =>
+            RpcCommand::LoadContacts => {
+                self.handle_load_contacts(tx_rpc, client.db_conn.clone())
+                    .await
+            }
+            RpcCommand::LoadChat { onion_id } => {
+                self.handle_load_chat(onion_id, tx_rpc, client.db_conn.clone())
+                    .await
+            }
+            RpcCommand::SendMessage { to, text } => {
+                self.handle_send_message(to, text, tx_broadcast, client)
+                    .await
+            }
+            RpcCommand::AddContact {
+                nickname,
+                onion_id,
+                public_key,
+            } => {
+                self.handle_add_contact(
+                    nickname,
+                    onion_id,
+                    public_key,
+                    tx_rpc,
+                    client.db_conn.clone(),
+                )
+                .await
+            }
+            RpcCommand::UpdateContact {
+                onion_id,
+                nickname,
+                public_key,
+            } => {
+                self.handle_update_contact(
+                    onion_id,
+                    nickname.as_deref(),
+                    public_key.as_deref(),
+                    tx_rpc,
+                    client.db_conn.clone(),
+                )
+                .await
+            }
+            RpcCommand::LoadUser => {
+                self.handle_load_user(
+                    &client.get_identity_unredacted()?,
+                    tx_rpc,
+                    client.db_conn.clone(),
+                )
+                .await
+            }
+            RpcCommand::UpdateUser {
+                public_key,
+                private_key,
+            } => {
                 self.handle_update_user(
                     &client.get_identity_unredacted()?,
                     public_key.as_deref(),
                     private_key.as_deref(),
                     tx_rpc,
-                    client.db_conn.clone()
-                ).await,
-            RpcCommand::DeleteContactMessages { onion_id } =>
-                self.handle_delete_contact_messages(onion_id, tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::DeleteContact { onion_id } =>
-                self.handle_delete_contact(onion_id, tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::ResetTorCircuit => 
-                self.handle_reset_tor_circuit(client, tx_rpc).await,
-            RpcCommand::DeleteAllContacts =>
-                self.handle_delete_all_contacts(tx_rpc, client.db_conn.clone()).await,
-            RpcCommand::SendAppFocusState { focussed } =>
-            {
+                    client.db_conn.clone(),
+                )
+                .await
+            }
+            RpcCommand::DeleteContactMessages { onion_id } => {
+                self.handle_delete_contact_messages(onion_id, tx_rpc, client.db_conn.clone())
+                    .await
+            }
+            RpcCommand::DeleteContact { onion_id } => {
+                self.handle_delete_contact(onion_id, tx_rpc, client.db_conn.clone())
+                    .await
+            }
+            RpcCommand::ResetTorCircuit => self.handle_reset_tor_circuit(client, tx_rpc).await,
+            RpcCommand::DeleteAllContacts => {
+                self.handle_delete_all_contacts(tx_rpc, client.db_conn.clone())
+                    .await
+            }
+            RpcCommand::SendAppFocusState { focussed } => {
                 ui_focus::set_focussed(*focussed);
                 Ok(())
             }
-            RpcCommand::GetConfigValue { key } =>
-                self.handle_get_config_value(key, client, tx_rpc).await,
-            RpcCommand::SetConfigValue { key, value } =>
-                self.handle_set_config_value(key, value, client).await,
-            RpcCommand::PingHiddenService =>
-                self.handle_ping_hidden_service(client, tx_rpc).await,
-            RpcCommand::PingDaemon =>
-                self.handle_ping_daemon(tx_rpc).await,
-
+            RpcCommand::GetConfigValue { key } => {
+                self.handle_get_config_value(key, client, tx_rpc).await
+            }
+            RpcCommand::SetConfigValue { key, value } => {
+                self.handle_set_config_value(key, value, client).await
+            }
+            RpcCommand::PingHiddenService => self.handle_ping_hidden_service(client, tx_rpc).await,
+            RpcCommand::PingDaemon => self.handle_ping_daemon(tx_rpc).await,
         }
     }
 
@@ -220,17 +273,18 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
-        let contacts = db::ContactDb::retrieve_all(Some("last_message_at"), None, db_conn.clone()).await?;
+        let contacts =
+            db::ContactDb::retrieve_all(Some("last_message_at"), None, db_conn.clone()).await?;
 
         LoadContactsResponse {
             contacts: contacts
                 .into_iter()
                 .map(serde_json::to_value)
-                .collect::<Result<Vec<_>, _>>()?
-
-        }.send_rpc_reply(tx)
+                .collect::<Result<Vec<_>, _>>()?,
+        }
+        .send_rpc_reply(tx)
     }
-    
+
     /// Handler to load chat.
     async fn handle_load_chat(
         &self,
@@ -244,9 +298,9 @@ impl RpcCommand {
             messages: messages
                 .into_iter()
                 .map(serde_json::to_value)
-                .collect::<Result<Vec<_>, _>>()?
-
-        }.send_rpc_reply(tx)
+                .collect::<Result<Vec<_>, _>>()?,
+        }
+        .send_rpc_reply(tx)
     }
 
     /// Handler to send message.
@@ -266,7 +320,9 @@ impl RpcCommand {
             is_incoming: false,
             sent_status: false,
             verified_status: false,
-        }.insert(client.db_conn.clone()).await?;
+        }
+        .insert(client.db_conn.clone())
+        .await?;
 
         // Send message to peer.
         if client.send_message_to_peer(to, text).await.is_ok() {
@@ -274,8 +330,10 @@ impl RpcCommand {
             db::UpdateMessageDb {
                 id: message_id.expect_i64()?,
                 sent_status: Some(true),
-            }.update(client.db_conn.clone()).await?;
-        } 
+            }
+            .update(client.db_conn.clone())
+            .await?;
+        }
 
         // By sending a incoming message to the UI over broadcast, the UI will reload the chat.
         #[derive(serde::Serialize)]
@@ -283,7 +341,9 @@ impl RpcCommand {
             /// HsId from peer we received this message from.
             pub onion_id: String,
         }
-        let incoming_message = SendIncomingMessage { onion_id: to.to_string() };
+        let incoming_message = SendIncomingMessage {
+            onion_id: to.to_string(),
+        };
         let incoming_message = serde_json::to_string(&incoming_message)? + "\n";
         if let Some(tx_broadcast) = tx {
             let _ = tx_broadcast.send(MessageToUI::Broadcast(incoming_message));
@@ -308,13 +368,14 @@ impl RpcCommand {
             last_message_at: 0,
             last_viewed_at: chrono::Utc::now().timestamp() as i32,
             amount_unread_messages: 0,
-        }.insert(db_conn.clone()).await.is_ok();
+        }
+        .insert(db_conn.clone())
+        .await
+        .is_ok();
 
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to update existing contact.
     async fn handle_update_contact(
         &self,
@@ -328,13 +389,14 @@ impl RpcCommand {
             onion_id: onion_id.into(),
             nickname: nickname.map(|n| n.to_string()),
             public_key: public_key.map(|pk| pk.to_string()),
-        }.update(db_conn.clone()).await.is_ok();
+        }
+        .update(db_conn.clone())
+        .await
+        .is_ok();
 
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to load user of app.
     async fn handle_load_user(
         &self,
@@ -346,9 +408,10 @@ impl RpcCommand {
 
         LoadUserResponse {
             user: serde_json::to_value(user)?,
-        }.send_rpc_reply(tx)
+        }
+        .send_rpc_reply(tx)
     }
-    
+
     /// Handler to update user of app.
     async fn handle_update_user(
         &self,
@@ -362,13 +425,14 @@ impl RpcCommand {
             onion_id: onion_id.into(),
             public_key: public_key.map(|pk| pk.to_string()),
             private_key: private_key.map(|n| n.to_string()),
-        }.update(db_conn.clone()).await.is_ok();
+        }
+        .update(db_conn.clone())
+        .await
+        .is_ok();
 
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to delete all messages of a contact.
     async fn handle_delete_contact_messages(
         &self,
@@ -376,12 +440,12 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
-        let success = db::MessageDb::delete(onion_id, db_conn.clone()).await.is_ok();
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        let success = db::MessageDb::delete(onion_id, db_conn.clone())
+            .await
+            .is_ok();
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to delete a contact and conversation.
     async fn handle_delete_contact(
         &self,
@@ -389,10 +453,10 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
-        let success = db::ContactDb::delete(onion_id, db_conn.clone()).await.is_ok();
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        let success = db::ContactDb::delete(onion_id, db_conn.clone())
+            .await
+            .is_ok();
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
 
     /// Handler to reset Tor circuit.
@@ -402,9 +466,7 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
     ) -> Result<(), RpcError> {
         let success = client.reset_tor_circuit().await.is_ok();
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
 
     /// Handler to delete all contacts and conversations.
@@ -414,11 +476,9 @@ impl RpcCommand {
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
         let success = db::ContactDb::delete_all(db_conn.clone()).await.is_ok();
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to get configuration value of user.
     async fn handle_get_config_value(
         &self,
@@ -431,11 +491,9 @@ impl RpcCommand {
             .map_err(|_| error::ClientError::InvalidConfigKey)?;
         let cfg = client.config.lock().await;
         let value = cfg.get(&key);
-        GetConfigValueResponse {
-            value
-        }.send_rpc_reply(tx)
+        GetConfigValueResponse { value }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to update configuration value of user.
     async fn handle_set_config_value(
         &self,
@@ -447,7 +505,7 @@ impl RpcCommand {
         client.reload_config().await?;
         Ok(())
     }
-    
+
     /// Handler to ping our own hidden service.
     async fn handle_ping_hidden_service(
         &self,
@@ -455,26 +513,19 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
     ) -> Result<(), RpcError> {
         let success = client.is_reachable().await.is_ok();
-        SuccessResponse {
-            success,
-        }.send_rpc_reply(tx)
+        SuccessResponse { success }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to ping daemon.
     async fn handle_ping_daemon(
         &self,
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
     ) -> Result<(), RpcError> {
-        SuccessResponse {
-            success: true,
-        }.send_rpc_reply(tx)
+        SuccessResponse { success: true }.send_rpc_reply(tx)
     }
 }
 
 /// Send error as reply.
-pub fn reply_rpc_error(
-    tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
-    err: &RpcError,
-) {
+pub fn reply_rpc_error(tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>, err: &RpcError) {
     let _ = tx.send(MessageToUI::Rpc(format!(r#"{{"error":"{err}"}}\n"#)));
 }

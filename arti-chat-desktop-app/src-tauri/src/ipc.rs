@@ -24,7 +24,14 @@ pub async fn get_socket_stream(
 }
 
 pub async fn launch_daemon() -> anyhow::Result<()> {
-    if get_socket_stream(SocketPaths::BROADCAST, 5, tokio::time::Duration::from_millis(2000)).await.is_ok() {
+    if get_socket_stream(
+        SocketPaths::BROADCAST,
+        5,
+        tokio::time::Duration::from_millis(2000),
+    )
+    .await
+    .is_ok()
+    {
         return Ok(());
     }
 

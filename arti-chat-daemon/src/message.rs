@@ -31,7 +31,10 @@ pub struct SignedMessagePayload {
 
 impl MessagePayload {
     /// Sign message.
-    pub fn sign_message(&self, private_key: &mut ed25519_dalek::SigningKey) -> Result<SignedMessagePayload, MessageError> {
+    pub fn sign_message(
+        &self,
+        private_key: &mut ed25519_dalek::SigningKey,
+    ) -> Result<SignedMessagePayload, MessageError> {
         let json_payload = serde_json::to_string(&self)?;
         let signature = private_key.sign(json_payload.as_bytes()).to_string();
 
@@ -52,7 +55,7 @@ impl SignedMessagePayload {
         }
         let mut public_key_array = [0_u8; ed25519_dalek::PUBLIC_KEY_LENGTH];
         public_key_array.copy_from_slice(&public_key);
-        let public_key = ed25519_dalek::VerifyingKey::from_bytes(&public_key_array)?; 
+        let public_key = ed25519_dalek::VerifyingKey::from_bytes(&public_key_array)?;
 
         // Get signature + payload.
         let signature: ed25519_dalek::Signature = self.signature.parse()?;

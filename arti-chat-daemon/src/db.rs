@@ -1,13 +1,13 @@
 //! Logic to connect with database.
 
-use async_trait::async_trait;
 use crate::error;
+use async_trait::async_trait;
 use rand::RngCore;
-use rusqlite::{Connection, params, Row, ToSql};
+use rusqlite::{Connection, Row, ToSql, params};
 use tokio::sync::Mutex as TokioMutex;
 
 /// Type for rusqlite database connection.
-pub type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>; 
+pub type DatabaseConnection = std::sync::Arc<TokioMutex<rusqlite::Connection>>;
 
 /// Primary key (after insert) can be of type can be String (onion_id) or int (id).
 #[non_exhaustive]
@@ -24,7 +24,7 @@ pub enum PrimaryKey<'a> {
 pub enum InsertId {
     /// Text.
     Text(String),
-    
+
     /// Integer.
     Integer(i64),
 }
@@ -40,10 +40,12 @@ impl InsertId {
 }
 
 /// Create database tables + return connection.
-pub async fn init_database(project_dir: std::path::PathBuf) -> Result<Connection, error::DatabaseError> {
+pub async fn init_database(
+    project_dir: std::path::PathBuf,
+) -> Result<Connection, error::DatabaseError> {
     let conn = Connection::open(database_path(&project_dir))?;
 
-    let db_key = retrieve_db_encryption_key()?; 
+    let db_key = retrieve_db_encryption_key()?;
     conn.pragma_update(None, "key", &db_key)?;
     conn.execute_batch(
         r#"
@@ -125,17 +127,23 @@ pub struct UpdateUserDb {
 
     /// Optional update for public_key column.
     pub public_key: Option<String>,
-    
+
     /// Optional update for private_key column.
     pub private_key: Option<String>,
 }
 
 impl DbModel for UserDb {
-    fn table() -> &'static str { "user" }
-    
-    fn primary_key(&self) -> PrimaryKey { PrimaryKey::Provided(&self.onion_id) }
+    fn table() -> &'static str {
+        "user"
+    }
 
-    fn delete_by() -> &'static str { "onion_id" }
+    fn primary_key(&self) -> PrimaryKey {
+        PrimaryKey::Provided(&self.onion_id)
+    }
+
+    fn delete_by() -> &'static str {
+        "onion_id"
+    }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -157,14 +165,24 @@ impl DbModel for UserDb {
 }
 
 impl DbUpdateModel<UserDb> for UpdateUserDb {
-    fn pk_column() ->  &'static str { "onion_id" }
-    
-    fn pk_value(&self) -> &dyn ToSql { &self.onion_id }
-    
+    fn pk_column() -> &'static str {
+        "onion_id"
+    }
+
+    fn pk_value(&self) -> &dyn ToSql {
+        &self.onion_id
+    }
+
     fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)> {
         vec![
-            ("public_key", self.public_key.as_ref().map(|v| v as &dyn ToSql)),
-            ("private_key", self.private_key.as_ref().map(|v| v as &dyn ToSql)),
+            (
+                "public_key",
+                self.public_key.as_ref().map(|v| v as &dyn ToSql),
+            ),
+            (
+                "private_key",
+                self.private_key.as_ref().map(|v| v as &dyn ToSql),
+            ),
         ]
     }
 }
@@ -186,7 +204,7 @@ pub struct ContactDb {
 
     /// Computed field showing timestamp of last message with this contact..
     pub last_message_at: i32,
-    
+
     /// Column last_viewed_at.
     pub last_viewed_at: i32,
 
@@ -203,7 +221,7 @@ pub struct UpdateContactDb {
 
     /// Optional update for nickname column.
     pub nickname: Option<String>,
-    
+
     /// Optional update for public_key column.
     pub public_key: Option<String>,
 }
@@ -240,8 +258,7 @@ impl ContactDb {
             ORDER BY
                 {} {}
             "#,
-            order,
-            direction
+            order, direction
         );
 
         let mut stmt = conn.prepare(&sql)?;
@@ -256,13 +273,18 @@ impl ContactDb {
     }
 }
 
-
 impl DbModel for ContactDb {
-    fn table() -> &'static str { "contact" }
+    fn table() -> &'static str {
+        "contact"
+    }
 
-    fn primary_key(&self) -> PrimaryKey { PrimaryKey::Provided(&self.onion_id) }
-    
-    fn delete_by() -> &'static str { "onion_id" }
+    fn primary_key(&self) -> PrimaryKey {
+        PrimaryKey::Provided(&self.onion_id)
+    }
+
+    fn delete_by() -> &'static str {
+        "onion_id"
+    }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -286,14 +308,21 @@ impl DbModel for ContactDb {
 }
 
 impl DbUpdateModel<ContactDb> for UpdateContactDb {
-    fn pk_column() ->  &'static str { "onion_id" }
-    
-    fn pk_value(&self) -> &dyn ToSql { &self.onion_id }
-    
+    fn pk_column() -> &'static str {
+        "onion_id"
+    }
+
+    fn pk_value(&self) -> &dyn ToSql {
+        &self.onion_id
+    }
+
     fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)> {
         vec![
             ("nickname", self.nickname.as_ref().map(|v| v as &dyn ToSql)),
-            ("public_key", self.public_key.as_ref().map(|v| v as &dyn ToSql)),
+            (
+                "public_key",
+                self.public_key.as_ref().map(|v| v as &dyn ToSql),
+            ),
         ]
     }
 }
@@ -318,7 +347,7 @@ pub struct MessageDb {
 
     /// Column is_incoming.
     pub is_incoming: bool,
-    
+
     /// Column sent_status.
     pub sent_status: bool,
 
@@ -338,11 +367,17 @@ pub struct UpdateMessageDb {
 }
 
 impl DbModel for MessageDb {
-    fn table() -> &'static str { "message" }
-    
-    fn primary_key(&self) -> PrimaryKey { PrimaryKey::AutoIncrement }
-    
-    fn delete_by() -> &'static str { "contact_onion_id" }
+    fn table() -> &'static str {
+        "message"
+    }
+
+    fn primary_key(&self) -> PrimaryKey {
+        PrimaryKey::AutoIncrement
+    }
+
+    fn delete_by() -> &'static str {
+        "contact_onion_id"
+    }
 
     fn insert_values(&self) -> Vec<(&'static str, &dyn ToSql)> {
         vec![
@@ -369,14 +404,19 @@ impl DbModel for MessageDb {
 }
 
 impl DbUpdateModel<MessageDb> for UpdateMessageDb {
-    fn pk_column() ->  &'static str { "id" }
-    
-    fn pk_value(&self) -> &dyn ToSql { &self.id }
-    
+    fn pk_column() -> &'static str {
+        "id"
+    }
+
+    fn pk_value(&self) -> &dyn ToSql {
+        &self.id
+    }
+
     fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)> {
-        vec![
-            ("sent_status", self.sent_status.as_ref().map(|v| v as &dyn ToSql)),
-        ]
+        vec![(
+            "sent_status",
+            self.sent_status.as_ref().map(|v| v as &dyn ToSql),
+        )]
     }
 }
 
@@ -384,10 +424,10 @@ impl MessageDb {
     /// Retrieve messages for chat.
     pub async fn retrieve_messages(
         onion_id: &str,
-        conn: DatabaseConnection
-    ) -> Result<Vec<Self>, error::DatabaseError>  {
+        conn: DatabaseConnection,
+    ) -> Result<Vec<Self>, error::DatabaseError> {
         let conn = conn.lock().await;
-       
+
         let ts = chrono::Utc::now().timestamp();
         let mut stmt = conn.prepare("UPDATE contact SET last_viewed_at = ? WHERE onion_id = ?")?;
         stmt.execute(params![ts, onion_id])?;
@@ -397,12 +437,10 @@ impl MessageDb {
              WHERE
                 contact_onion_id = ?
              ORDER BY
-                timestamp ASC"
+                timestamp ASC",
         )?;
-        
-        let rows = stmt.query_map(params![onion_id], |row| {
-            Self::from_row(row)
-        })?;
+
+        let rows = stmt.query_map(params![onion_id], |row| Self::from_row(row))?;
 
         let mut results = Vec::new();
         for row in rows {
@@ -411,11 +449,11 @@ impl MessageDb {
 
         Ok(results)
     }
-    
+
     /// Retrieve failed chat message.
     pub async fn failed_messages(
-        conn: DatabaseConnection
-    ) -> Result<Vec<Self>, error::DatabaseError>  {
+        conn: DatabaseConnection,
+    ) -> Result<Vec<Self>, error::DatabaseError> {
         let conn = conn.lock().await;
 
         let mut stmt = conn.prepare(
@@ -427,12 +465,10 @@ impl MessageDb {
               AND
                 timestamp <= strftime('%s','now') - 60
              ORDER BY
-                timestamp DESC"
+                timestamp DESC",
         )?;
-        
-        let rows = stmt.query_map([], |row| {
-            Self::from_row(row)
-        })?;
+
+        let rows = stmt.query_map([], |row| Self::from_row(row))?;
 
         let mut results = Vec::new();
         for row in rows {
@@ -464,7 +500,7 @@ impl ConfigDb {
                 ON CONFLICT(key) DO UPDATE
                     SET value=excluded.value
             "#,
-            params![key, value]
+            params![key, value],
         )?;
 
         Ok(())
@@ -476,11 +512,9 @@ impl ConfigDb {
         conn: DatabaseConnection,
     ) -> Result<Option<String>, error::DatabaseError> {
         let conn = conn.lock().await;
-        let result = conn.query_row(
-            "SELECT value FROM config WHERE key = ?1",
-            [key],
-            |row| row.get::<_, String>(0),
-        );
+        let result = conn.query_row("SELECT value FROM config WHERE key = ?1", [key], |row| {
+            row.get::<_, String>(0)
+        });
 
         match result {
             Ok(v) => Ok(Some(v)),
@@ -510,7 +544,7 @@ impl ConfigDb {
 
 /// Public trait implementing default methods (insert, retrieve, update) for Db types.
 #[async_trait]
-pub trait DbModel : Sized {
+pub trait DbModel: Sized {
     /// Return table name.
     fn table() -> &'static str;
 
@@ -548,7 +582,10 @@ pub trait DbModel : Sized {
     }
 
     /// Default select behavior.
-    async fn retrieve(onion_id: &str, conn: DatabaseConnection) -> Result<Self, error::DatabaseError> {
+    async fn retrieve(
+        onion_id: &str,
+        conn: DatabaseConnection,
+    ) -> Result<Self, error::DatabaseError> {
         let conn = conn.lock().await;
         let sql = format!("SELECT * FROM {} WHERE onion_id = ?", Self::table());
 
@@ -565,13 +602,16 @@ pub trait DbModel : Sized {
         let mut sql = format!("SELECT * FROM {}", Self::table());
 
         if let Some(oc) = order_column {
-            sql = format!("{} ORDER BY {} {}", sql, oc, if desc.unwrap_or(true) { "DESC" } else { "ASC" });
+            sql = format!(
+                "{} ORDER BY {} {}",
+                sql,
+                oc,
+                if desc.unwrap_or(true) { "DESC" } else { "ASC" }
+            );
         }
 
         let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt.query_map([], |row| {
-            Self::from_row(row)
-        })?;
+        let rows = stmt.query_map([], |row| Self::from_row(row))?;
 
         let mut results = Vec::new();
         for row in rows {
@@ -582,22 +622,21 @@ pub trait DbModel : Sized {
     }
 
     /// Default delete behavior.
-    async fn delete(
-        onion_id: &str,
-        conn: DatabaseConnection,
-    ) -> Result<(), error::DatabaseError> {
+    async fn delete(onion_id: &str, conn: DatabaseConnection) -> Result<(), error::DatabaseError> {
         let conn = conn.lock().await;
-        let sql = format!("DELETE FROM {} WHERE {} = ?", Self::table(), Self::delete_by());
+        let sql = format!(
+            "DELETE FROM {} WHERE {} = ?",
+            Self::table(),
+            Self::delete_by()
+        );
         let mut stmt = conn.prepare(&sql)?;
         stmt.execute(params![onion_id])?;
 
         Ok(())
     }
-    
+
     /// Default delete all behavior.
-    async fn delete_all(
-        conn: DatabaseConnection,
-    ) -> Result<(), error::DatabaseError> {
+    async fn delete_all(conn: DatabaseConnection) -> Result<(), error::DatabaseError> {
         let conn = conn.lock().await;
         let sql = format!("DELETE FROM {}", Self::table());
         conn.execute(&sql, [])?;
@@ -614,7 +653,7 @@ pub trait DbUpdateModel<R: DbModel> {
 
     /// PK value for WHERE clause.
     fn pk_value(&self) -> &dyn ToSql;
-    
+
     /// List of (column -> values) for UPDATE column=value.
     fn update_values(&self) -> Vec<(&'static str, Option<&dyn ToSql>)>;
 
@@ -650,7 +689,7 @@ pub trait DbUpdateModel<R: DbModel> {
         conn.execute(&sql, params.as_slice())?;
         Ok(())
     }
-} 
+}
 
 /// Helper method to get path do .db file in project_dir.
 fn database_path(project_dir: &std::path::Path) -> std::path::PathBuf {
@@ -673,4 +712,3 @@ fn retrieve_db_encryption_key() -> Result<String, error::DatabaseError> {
         }
     }
 }
-

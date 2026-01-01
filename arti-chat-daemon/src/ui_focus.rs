@@ -15,4 +15,3 @@ pub fn set_focussed(val: bool) {
 pub fn is_focussed() -> bool {
     UI_FOCUSSED.load(Ordering::Relaxed)
 }
-

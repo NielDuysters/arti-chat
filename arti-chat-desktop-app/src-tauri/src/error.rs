@@ -6,10 +6,10 @@ use thiserror::Error;
 pub enum DesktopUiError {
     #[error("Socket timeout.")]
     SocketTimeout,
-    
+
     #[error("Daemon couldn't launch.")]
     DaemonStartFailure,
-    
+
     #[error("Unsupported operating system.")]
     UnsupportedOperatingSystem,
 }

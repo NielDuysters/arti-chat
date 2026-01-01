@@ -1,13 +1,13 @@
 //! Logic to communicate between the daemon and the desktop app using Inter-process communication.
 
 use crate::{client, error::IpcError, rpc};
+use tokio::sync::Mutex as TokioMutex;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::UnixListener,
     net::unix::{OwnedReadHalf, OwnedWriteHalf},
     sync::mpsc::{self, UnboundedSender},
 };
-use tokio::sync::Mutex as TokioMutex;
 
 /// Possible paths for UnixSockets.
 #[non_exhaustive]
@@ -16,7 +16,7 @@ pub struct SocketPaths;
 impl SocketPaths {
     /// Socket for RPC (send + reply).
     pub const RPC: &str = "/tmp/arti-chat.rpc.sock";
-    
+
     /// Socket for broadcasting (fire and forget).
     pub const BROADCAST: &str = "/tmp/arti-chat.broadcast.sock";
 }
@@ -32,11 +32,10 @@ pub enum MessageToUI {
 
 /// Run our IPC server.
 pub async fn run_ipc_server(
-    mut message_rx: tokio::sync::mpsc::UnboundedReceiver<String>,   // Receives incoming chat messages
+    mut message_rx: tokio::sync::mpsc::UnboundedReceiver<String>, // Receives incoming chat messages
     // from client.
     client: std::sync::Arc<client::Client>,
 ) -> Result<(), IpcError> {
-
     // Bind broadcast socket.
     // Used for fire and forget-messages for when we do not expect a reply from the UI.
     // E.g: When the daemon wants to push an incoming message to the UI.
@@ -52,9 +51,9 @@ pub async fn run_ipc_server(
     tracing::info!("RPC IPC listening at: {}", SocketPaths::RPC);
 
     // List of outgoing channels to subscribed UI.
-    let broadcast_writers = std::sync::Arc::new(TokioMutex::new(
-        std::vec::Vec::<UnboundedSender<MessageToUI>>::new()
-    ));
+    let broadcast_writers = std::sync::Arc::new(TokioMutex::new(std::vec::Vec::<
+        UnboundedSender<MessageToUI>,
+    >::new()));
 
     // Spawn task to retry failed messages.
     let bw_clone = broadcast_writers.clone();
@@ -127,12 +126,12 @@ pub async fn run_ipc_server(
             }
         }
     }
-} 
+}
 
 /// Writes to UI whenever daemon demands it.
 async fn ui_write_loop(
-    mut rx: mpsc::UnboundedReceiver<MessageToUI>,   // Receives messages pushed by daemon.
-    mut write_half: OwnedWriteHalf,                 // Writer handle to UI.
+    mut rx: mpsc::UnboundedReceiver<MessageToUI>, // Receives messages pushed by daemon.
+    mut write_half: OwnedWriteHalf,               // Writer handle to UI.
 ) {
     while let Some(msg) = rx.recv().await {
         let msg = match msg {
@@ -149,12 +148,11 @@ async fn ui_write_loop(
 
 /// Handle a RPC call coming from the UI.
 async fn handle_rpc_call(
-    read_half: OwnedReadHalf,                               // Read incoming RPC call.
-    tx_rpc: UnboundedSender<MessageToUI>,                   // Reply to current RPC call.
-    tx_broadcast: Option<UnboundedSender<MessageToUI>>,     // Write to UI.
+    read_half: OwnedReadHalf,             // Read incoming RPC call.
+    tx_rpc: UnboundedSender<MessageToUI>, // Reply to current RPC call.
+    tx_broadcast: Option<UnboundedSender<MessageToUI>>, // Write to UI.
     client: std::sync::Arc<client::Client>,
 ) {
-
     // Convert incoming RPC call to lines.
     let mut lines = BufReader::new(read_half).lines();
 

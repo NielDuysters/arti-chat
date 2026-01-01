@@ -36,10 +36,10 @@
 #![deny(clippy::mod_module_files)]
 #![allow(clippy::let_unit_value)]
 #![allow(clippy::uninlined_format_args)]
-#![allow(clippy::significant_drop_in_scrutinee)] 
+#![allow(clippy::significant_drop_in_scrutinee)]
 #![allow(clippy::result_large_err)]
-#![allow(clippy::needless_raw_string_hashes)] 
-#![allow(clippy::needless_lifetimes)] 
+#![allow(clippy::needless_raw_string_hashes)]
+#![allow(clippy::needless_lifetimes)]
 #![allow(mismatched_lifetime_syntaxes)]
 
 use tokio::sync::Mutex as TokioMutex;
@@ -53,10 +53,11 @@ pub mod rpc;
 pub mod ui_focus;
 
 /// Project directory storing sqlite db + config.
-pub static PROJECT_DIR: once_cell::sync::Lazy<directories::ProjectDirs> = once_cell::sync::Lazy::new(|| {
-    directories::ProjectDirs::from("com", "arti-chat", "desktop")
-        .expect("Failed to determine project directories")
-});
+pub static PROJECT_DIR: once_cell::sync::Lazy<directories::ProjectDirs> =
+    once_cell::sync::Lazy::new(|| {
+        directories::ProjectDirs::from("com", "arti-chat", "desktop")
+            .expect("Failed to determine project directories")
+    });
 
 /// Run daemon and start all required services.
 pub async fn run() -> Result<(), error::DaemonError> {
@@ -83,7 +84,6 @@ pub async fn run() -> Result<(), error::DaemonError> {
 
     // Service hidden service.
     client.serve(message_tx).await?;
-
 
     Ok(())
 }
