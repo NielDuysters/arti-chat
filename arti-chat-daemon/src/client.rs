@@ -622,7 +622,7 @@ async fn handle_request(
                 return Ok(());
             }
 
-            tracing::debug!("HANDLE_REQ: incoming payload");
+            tracing::debug!("HANDLE_REQ: incoming payload: {}", body);
 
             // ─────────────────────────────
             // HANDSHAKE PATH
@@ -652,13 +652,17 @@ async fn handle_request(
                 stream.write_all(out.as_bytes()).await?;
                 stream.flush().await?;
 
+                tracing::debug!("HANDLE_REQ CCC");
+
                 let sess = session::complete_handshake(
-                    &reply,
+                    &handshake,
                     &my_onion_id,
                     &peer_verify,
                     my_eph,
                     false, // responder
                 )?;
+
+                tracing::debug!("Handshake completed: {}", handshake.from);
 
                 let mut sessions = sessions.lock().await;
                 sessions.insert(handshake.from.clone(), sess);
@@ -678,7 +682,11 @@ async fn handle_request(
 
             let mut sessions_guard = sessions.lock().await;
 
-            let session = sessions_guard
+            tracing::debug!("HANDLE_REQ from_onion_id: {}", &encrypted.from_onion_id);
+            tracing::debug!("HANDLE_REQ session len: {}", sessions_guard.len());
+
+
+            let mut session = sessions_guard
                 .get_mut(&encrypted.from_onion_id)
                 .ok_or_else(|| {
                     tracing::warn!(

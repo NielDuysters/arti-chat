@@ -132,18 +132,23 @@ pub fn complete_handshake(
     my_eph: StaticSecret,
     initiator: bool,
 ) -> Result<Session, ClientError> {
+    tracing::debug!("CH 1");
     if reply.to != my_onion {
+        tracing::debug!("CH REPLY TO {} AND MY ONION {}", reply.to, my_onion);
         return Err(ClientError::ArtiBug);
     }
+    tracing::debug!("CH 2");
 
     // Verify reply signature
     let t = transcript(&reply.from, &reply.to, &reply.eph_pub);
     let sig: ed25519_dalek::Signature = reply.sig.parse()?;
     peer_verify.verify_strict(&t, &sig)?;
+    tracing::debug!("CH 3");
 
     // Compute shared secret
     let peer_pub = PublicKey::from(reply.eph_pub);
     let shared = my_eph.diffie_hellman(&peer_pub);
+    tracing::debug!("CH 4");
 
     // Derive two chain keys
     let hk = Hkdf::<Sha256>::new(None, shared.as_bytes());
@@ -153,9 +158,11 @@ pub fn complete_handshake(
         .map_err(|_| ClientError::ArtiBug)?;
     hk.expand(b"arti-chat/chain-b/v1", &mut b)
         .map_err(|_| ClientError::ArtiBug)?;
+    tracing::debug!("CH 5");
 
     let (send, recv) = if initiator { (a, b) } else { (b, a) };
 
+    tracing::debug!("CH 6");
     Ok(Session {
         send_chain: send,
         recv_chain: recv,
