@@ -463,7 +463,9 @@ impl MessageDb {
               AND
                 is_incoming = 0
               AND
-                timestamp <= strftime('%s','now') - 60
+                timestamp <= strftime('%s','now') - 30
+              AND
+                timestamp >= strftime('%s','now') - 300
              ORDER BY
                 timestamp DESC",
         )?;

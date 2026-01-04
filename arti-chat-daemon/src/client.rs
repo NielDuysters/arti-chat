@@ -268,7 +268,7 @@ impl Client {
                 }
             }
 
-            tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
         }
     }
 
