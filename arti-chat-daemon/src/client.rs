@@ -96,49 +96,43 @@ impl std::str::FromStr for ClientConfigKey {
 
 impl Client {
 
+
 async fn ensure_session(
     &self,
     peer_onion: &str,
 ) -> Result<(), error::ClientError> {
     let my_onion = self.get_identity_unredacted()?;
 
-    // ---- FAST PATH: check without holding lock long ----
+    // Fast-path
     {
         let sessions = self.sessions.lock().await;
         if sessions.contains_key(peer_onion) {
             return Ok(());
         }
-    } // 👈 lock dropped here
+    }
 
-    tracing::debug!("ENSURE SESSION: performing handshake");
+    tracing::debug!("ENSURE_SESSION: starting handshake with {}", peer_onion);
 
-    // ---- HANDSHAKE (NO SESSION LOCK HELD) ----
     let contact = db::ContactDb::retrieve(peer_onion, self.db_conn.clone()).await?;
     let peer_verify = session::verifying_key_from_hex(&contact.public_key)?;
 
     let (init, my_eph) =
         session::initiate_handshake(&my_onion, peer_onion, &self.private_key);
 
-    tracing::debug!("ENSURE SESSION: B");
     let mut stream = self
         .tor_client
         .lock()
         .await
         .connect(&format!("{peer_onion}:80"))
         .await?;
-    tracing::debug!("ENSURE SESSION: C");
 
     let mut out = serde_json::to_string(&init)?;
-        out.push('\0');
-stream.write_all(out.as_bytes()).await?;
-stream.flush().await?;
-
-    
-        tracing::debug!("ENSURE SESSION: D");
+    out.push('\0');
+    stream.write_all(out.as_bytes()).await?;
+    stream.flush().await?;
 
     let reply_raw = session::read_null_terminated(&mut stream).await?;
     let reply: session::Handshake = serde_json::from_str(&reply_raw)?;
-        tracing::debug!("ENSURE SESSION: E");
 
     let sess = session::complete_handshake(
         &reply,
@@ -148,14 +142,13 @@ stream.flush().await?;
         true, // initiator
     )?;
 
-    // ---- STORE SESSION ----
-    tracing::debug!("ENSURE SESSION: A");
     let mut sessions = self.sessions.lock().await;
     sessions.insert(peer_onion.to_string(), sess);
-    tracing::debug!("ENSURE SESSION: OK");
 
+    tracing::info!("ENSURE_SESSION: session established with {}", peer_onion);
     Ok(())
 }
+
 
 
     /// Launch chat client.
@@ -297,61 +290,56 @@ stream.flush().await?;
     }*/
 
     pub async fn send_message_to_peer(
-        &self,
-        to_onion_id: &str,
-        text: &str,
-    ) -> Result<(), error::ClientError> {
-        let my_onion = self.get_identity_unredacted()?;
+    &self,
+    to_onion_id: &str,
+    text: &str,
+) -> Result<(), error::ClientError> {
+    let my_onion = self.get_identity_unredacted()?;
 
-        // 1) ensure session
-           self.ensure_session(to_onion_id).await?;
+    // MUST establish session first
+    self.ensure_session(to_onion_id).await?;
 
-let mut sessions = self.sessions.lock().await;
-let session = sessions.get_mut(to_onion_id).expect("No session exists.");
+    let mut sessions = self.sessions.lock().await;
+    let session = sessions
+        .get_mut(to_onion_id)
+        .expect("session must exist after ensure_session");
 
-        tracing::debug!("SMTP A");
-
-        // 2) encrypt
-        #[derive(serde::Serialize)]
-        struct Plaintext {
-            onion_id: String,
-            text: String,
-            timestamp: i64,
-        }
-
-        let plain = Plaintext {
-            onion_id: my_onion.clone(),
-            text: text.to_string(),
-            timestamp: chrono::Utc::now().timestamp(),
-        };
-
-        let encrypted = session::encrypt(
-            session,
-            &serde_json::to_vec(&plain)?,
-            my_onion,
-        );
-
-        tracing::debug!("SMPT B");
-
-        drop(sessions); // release lock before network I/O
-
-        // 3) send
-        let mut stream = self
-            .tor_client
-            .lock()
-            .await
-            .connect(&format!("{to_onion_id}:80"))
-        .await?;
-        tracing::debug!("SMPT C");
-
-        let mut msg = serde_json::to_string(&encrypted)?;
-        msg.push('\0');
-        stream.write_all(msg.as_bytes()).await?;
-        stream.flush().await?;
-
-        tracing::debug!("SMPT OK");
-        Ok(())
+    #[derive(serde::Serialize)]
+    struct Plaintext {
+        onion_id: String,
+        text: String,
+        timestamp: i64,
     }
+
+    let plain = Plaintext {
+        onion_id: my_onion.clone(),
+        text: text.to_string(),
+        timestamp: chrono::Utc::now().timestamp(),
+    };
+
+    let encrypted = session::encrypt(
+        session,
+        &serde_json::to_vec(&plain)?,
+        my_onion,
+    );
+
+    drop(sessions);
+
+    let mut stream = self
+        .tor_client
+        .lock()
+        .await
+        .connect(&format!("{to_onion_id}:80"))
+        .await?;
+
+    let mut msg = serde_json::to_string(&encrypted)?;
+    msg.push('\0');
+    stream.write_all(msg.as_bytes()).await?;
+    stream.flush().await?;
+
+    tracing::debug!("SEND_MESSAGE: encrypted message sent");
+    Ok(())
+}
 
 
     /// Retry sending failed messages.
@@ -614,160 +602,136 @@ let session = sessions.get_mut(to_onion_id).expect("No session exists.");
         }
     }*/
 
-    async fn handle_request(
-        request: tor_hsservice::StreamRequest,
-        message_tx: tokio::sync::mpsc::UnboundedSender<String>,
-        db_conn: DatabaseConnection,
-        client_config: ClientConfigType,
-        my_onion_id: String,
-        signing_key: SigningKey,
-        sessions: std::sync::Arc<tokio::sync::Mutex<
-        std::collections::HashMap<String, session::Session>,
-        >>,
-    ) -> Result<(), error::ClientError> {
-        match request.request() {
-            IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
-                // Accept incoming stream
-                let mut stream = request.accept(Connected::new_empty()).await?;
+async fn handle_request(
+    request: tor_hsservice::StreamRequest,
+    message_tx: tokio::sync::mpsc::UnboundedSender<String>,
+    db_conn: DatabaseConnection,
+    client_config: ClientConfigType,
+    my_onion_id: String,
+    signing_key: SigningKey,
+    sessions: std::sync::Arc<TokioMutex<HashMap<String, session::Session>>>,
+) -> Result<(), error::ClientError> {
+    match request.request() {
+        IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
+            let mut stream = request.accept(Connected::new_empty()).await?;
 
-                tracing::debug!("REACHED HANDLE_REQ");
+            tracing::debug!("HANDLE_REQ: stream accepted");
 
-                // Read exactly one framed message
-                let body = session::read_null_terminated(&mut stream).await?;
-                if body.is_empty() {
+            let body = session::read_null_terminated(&mut stream).await?;
+            if body.is_empty() {
+                return Ok(());
+            }
+
+            tracing::debug!("HANDLE_REQ: incoming payload");
+
+            // ─────────────────────────────
+            // HANDSHAKE PATH
+            // ─────────────────────────────
+            if let Ok(handshake) = serde_json::from_str::<session::Handshake>(&body) {
+                tracing::debug!("HANDLE_REQ: handshake received");
+
+                if handshake.to != my_onion_id {
                     return Ok(());
                 }
 
-                tracing::debug!("Incoming: {}", body);
-
-                // First try handshake
-                if let Ok(handshake) = serde_json::from_str::<session::Handshake>(&body) {
-                    // --- HANDSHAKE PATH ---
-
-                    tracing::debug!("HANDSHAKE A");
-
-
-
-                    // Must be addressed to us
-                    if handshake.to != my_onion_id {
-                        return Ok(());
-                    }
-                    tracing::debug!("HANDSHAKE B");
-
-                    // Lookup sender identity key
-                    let contact = db::ContactDb::retrieve(&handshake.from, db_conn.clone()).await?;
-                    let peer_verify =
+                let contact =
+                    db::ContactDb::retrieve(&handshake.from, db_conn.clone()).await?;
+                let peer_verify =
                     session::verifying_key_from_hex(&contact.public_key)?;
-                    tracing::debug!("HANDSHAKE C");
 
-                    // Accept handshake
-                    let (reply, my_eph) =
-                    session::accept_handshake(&handshake, &my_onion_id, &peer_verify, &signing_key)?;
-                    tracing::debug!("HANDSHAKE D");
-
-                    // Send reply
-                    let mut out = serde_json::to_string(&reply)?;
-                    out.push('\0');
-                    stream.write_all(out.as_bytes()).await?;
-                    stream.flush().await.ok();
-                    tracing::debug!("HANDSHAKE E");
-
-                    // Finalize session (responder side)
-                    let sess = session::complete_handshake(
-                        &reply,
+                let (reply, my_eph) =
+                    session::accept_handshake(
+                        &handshake,
                         &my_onion_id,
                         &peer_verify,
-                        my_eph,
-                        false,
-                        //i_am_initiator(&my_onion_id, &handshake.from), // responder
+                        &signing_key,
                     )?;
 
-                    tracing::debug!("HANDSHAKE F");
-                    // Store session
-                    let mut sessions = sessions.lock().await;
-                    sessions.insert(handshake.from.clone(), sess);
+                let mut out = serde_json::to_string(&reply)?;
+                out.push('\0');
+                stream.write_all(out.as_bytes()).await?;
+                stream.flush().await?;
 
-                    tracing::info!(
-                        "Session established with {}",
-                        handshake.from
+                let sess = session::complete_handshake(
+                    &reply,
+                    &my_onion_id,
+                    &peer_verify,
+                    my_eph,
+                    false, // responder
+                )?;
+
+                let mut sessions = sessions.lock().await;
+                sessions.insert(handshake.from.clone(), sess);
+
+                tracing::info!(
+                    "HANDLE_REQ: session established with {}",
+                    handshake.from
+                );
+
+                return Ok(());
+            }
+
+            // ─────────────────────────────
+            // ENCRYPTED MESSAGE PATH
+            // ─────────────────────────────
+            let encrypted: session::Encrypted = serde_json::from_str(&body)?;
+
+            let mut sessions_guard = sessions.lock().await;
+
+            let session = sessions_guard
+                .get_mut(&encrypted.from_onion_id)
+                .ok_or_else(|| {
+                    tracing::warn!(
+                        "HANDLE_REQ: encrypted message from {} but no session exists",
+                        encrypted.from_onion_id
                     );
+                    error::ClientError::ArtiBug
+                })?;
 
-                    return Ok(());
-                }
+            let plaintext = session::decrypt(session, &encrypted)?;
+            drop(sessions_guard);
 
+            #[derive(serde::Deserialize, serde::Serialize)]
+            struct PlaintextPayload {
+                onion_id: String,
+                text: String,
+                timestamp: i64,
+            }
 
-                tracing::debug!("HANDLE_REQ A");
-
-                // Otherwise it must be encrypted data
-                let encrypted: session::Encrypted = serde_json::from_str(&body)?;
-
-                tracing::debug!("HANDLE_REQ B");
-                // --- ENCRYPTED MESSAGE PATH ---
-
-                // Load session
-                let mut sessions_guard = sessions.lock().await;
-                tracing::debug!("HANDLE_REQ C");
-                let session = sessions_guard
-                    .get_mut(&encrypted.from_onion_id)
-                    .ok_or_else(|| {
-                        tracing::debug!("HANDLE_REQ ERR 1");
-                        error::ClientError::ArtiBug
-                    })?;
-
-                tracing::debug!("HANDLE_REQ D");
-                // Decrypt (handles out-of-order internally)
-                let plaintext =
-                session::decrypt(session, &encrypted)?;
-                tracing::debug!("HANDLE_REQ E");
-
-                drop(sessions_guard); // release lock early
-
-                // Parse decrypted payload
-                #[derive(serde::Deserialize, serde::Serialize)]
-                struct PlaintextPayload {
-                    onion_id: String,
-                    text: String,
-                    timestamp: i64,
-                }
-
-                let payload: PlaintextPayload =
+            let payload: PlaintextPayload =
                 serde_json::from_slice(&plaintext)?;
-                tracing::debug!("HANDLE_REQ F");
 
-                // Store message
-                db::MessageDb {
-                    id: 0,
-                    contact_onion_id: payload.onion_id.clone(),
-                    body: payload.text.clone(),
-                    timestamp: payload.timestamp as i32,
-                    is_incoming: true,
-                    sent_status: false,
-                    verified_status: true, // session-authenticated
-                }
-                    .insert(db_conn.clone())
-                .await?;
+            db::MessageDb {
+                id: 0,
+                contact_onion_id: payload.onion_id.clone(),
+                body: payload.text.clone(),
+                timestamp: payload.timestamp as i32,
+                is_incoming: true,
+                sent_status: false,
+                verified_status: true,
+            }
+            .insert(db_conn.clone())
+            .await?;
 
-                // Send to UI
-                let _ = message_tx.send(serde_json::to_string(&payload)?);
+            let _ = message_tx.send(serde_json::to_string(&payload)?);
 
-                // Notification
-                let cfg = client_config.lock().await;
-                if cfg.enable_notifications && !ui_focus::is_focussed() {
-                    let _ = notify_rust::Notification::new()
-                        .summary("Arti Chat")
-                        .body("New message received")
-                        .show();
-                }
-
-                Ok(())
+            let cfg = client_config.lock().await;
+            if cfg.enable_notifications && !ui_focus::is_focussed() {
+                let _ = Notification::new()
+                    .summary("Arti Chat")
+                    .body("New message received")
+                    .show();
             }
 
-            _ => {
-                let _ = request.shutdown_circuit();
-                Ok(())
-            }
+            Ok(())
+        }
+
+        _ => {
+            let _ = request.shutdown_circuit();
+            Ok(())
         }
     }
+}
 
 
 }
