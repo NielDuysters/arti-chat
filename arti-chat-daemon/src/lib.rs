@@ -55,7 +55,7 @@ pub mod ui_focus;
 /// Project directory storing sqlite db + config.
 pub static PROJECT_DIR: once_cell::sync::Lazy<directories::ProjectDirs> =
     once_cell::sync::Lazy::new(|| {
-        directories::ProjectDirs::from("com", "arti-chat", "desktop")
+        directories::ProjectDirs::from("", "NielD", "Arti-Chat")
             .expect("Failed to determine project directories")
     });
 

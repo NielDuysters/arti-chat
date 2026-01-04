@@ -5,7 +5,7 @@ use crate::{
     db::{self, DbModel, DbUpdateModel},
     error,
     ipc::{self, MessageToUI},
-    message, ui_focus,
+    message, ui_focus, PROJECT_DIR,
 };
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SigningKey, VerifyingKey};
@@ -278,7 +278,14 @@ impl Client {
 
     /// Bootstrap connection to Tor network and return client.
     async fn bootstrap_tor_client() -> Result<ArtiTorClient, error::ClientError> {
-        let config = arti_client::TorClientConfig::default();
+        let state_dir = PROJECT_DIR.data_local_dir().join("hsstate");
+        let cache_dir = state_dir.join("cache");
+        let config = arti_client::config::TorClientConfigBuilder::
+            from_directories(
+                state_dir,
+                cache_dir
+            )
+        .build()?;
         let client = arti_client::TorClient::create_bootstrapped(config).await?;
 
         tracing::info!("Tor Client bootstrapped.");
