@@ -284,13 +284,23 @@ pub async fn read_null_terminated<S: tokio::io::AsyncRead + Unpin>(
     let mut buf = Vec::new();
     let mut byte = [0u8; 1];
 
-    while stream.read_exact(&mut byte).await.is_ok() {
-        if byte[0] == 0 {
-            break;
+    tracing::debug!("RNT A");
+
+    loop {
+        match stream.read(&mut byte).await {
+            Ok(0) => break, // EOF
+            Ok(1) => {
+                if byte[0] == 0 {
+                    break;
+                }
+                buf.push(byte[0]);
+            }
+            Ok(_) => unreachable!(),
+            Err(e) => return Err(e.into()),
         }
-        buf.push(byte[0]);
     }
 
+    tracing::debug!("RNT B");
     Ok(String::from_utf8_lossy(&buf).to_string())
 }
 

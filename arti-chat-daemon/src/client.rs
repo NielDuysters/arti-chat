@@ -129,8 +129,10 @@ async fn ensure_session(
     tracing::debug!("ENSURE SESSION: C");
 
     let mut out = serde_json::to_string(&init)?;
-    out.push('\0');
-    stream.write_all(out.as_bytes()).await?;
+        out.push('\0');
+stream.write_all(out.as_bytes()).await?;
+stream.flush().await?;
+
     
         tracing::debug!("ENSURE SESSION: D");
 
@@ -342,6 +344,7 @@ let session = sessions.get_mut(to_onion_id).unwrap();
         let mut msg = serde_json::to_string(&encrypted)?;
         msg.push('\0');
         stream.write_all(msg.as_bytes()).await?;
+        stream.flush().await?;
 
         Ok(())
     }
