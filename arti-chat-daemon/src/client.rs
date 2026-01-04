@@ -304,7 +304,9 @@ stream.flush().await?;
         let my_onion = self.get_identity_unredacted()?;
 
         // 1) ensure session
-        self.ensure_session(to_onion_id).await?;
+        if i_am_initiator(&my_onion, to_onion_id) {
+           self.ensure_session(to_onion_id).await?;
+    }
 
 let mut sessions = self.sessions.lock().await;
 let session = sessions.get_mut(to_onion_id).unwrap();
@@ -646,6 +648,19 @@ let session = sessions.get_mut(to_onion_id).unwrap();
 
                     tracing::debug!("HANDSHAKE A");
 
+                    // Determine initiator deterministically
+                    let i_am_initiator = my_onion_id < handshake.from;
+
+                    // If I am NOT the initiator, I must NOT accept a handshake I didn't initiate
+                    if !i_am_initiator {
+                        tracing::debug!(
+                            "HANDSHAKE ignored: peer {} is initiator (waiting for outbound handshake)",
+                            handshake.from
+                        );
+                        return Ok(());
+                    }
+
+
                     // Must be addressed to us
                     if handshake.to != my_onion_id {
                         return Ok(());
@@ -768,3 +783,8 @@ let session = sessions.get_mut(to_onion_id).unwrap();
 
 
 }
+
+fn i_am_initiator(my: &str, peer: &str) -> bool {
+    my < peer
+}
+
