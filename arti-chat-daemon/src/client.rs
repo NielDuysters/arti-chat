@@ -658,7 +658,10 @@ let session = sessions.get_mut(to_onion_id).unwrap();
                             handshake.from
                         );
 
-                        stream.close().await;
+                    let mut nullb = "".to_string();
+                    nullb.push('\0');
+                    stream.write_all(nullb.as_bytes()).await?;
+                    stream.flush().await.ok();
 
                         return Ok(());
                     }
