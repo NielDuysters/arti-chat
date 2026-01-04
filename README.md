@@ -12,9 +12,9 @@
    <p align="center">
 		✅ Free and open-source									<br>
     ✅ Fully decentralized and peer-to-peer	<br>
-    ✅ Anonymous (Tor)											<br>
-    ✅ Encrypted (Tor)											<br>
-    ✅ ed25519 sender verification					<br>
+    ✅ Reasonably anonymous (Tor)											<br>
+    ✅ Network encryption (Tor)											<br>
+    ✅ End-to-end encryption (ChaCha20-Poly1305 AEAD)					<br>
     ✅ Data stored locally and encrypted		<br>
   </p>
 </p>
@@ -62,7 +62,7 @@ curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/0bedcbf769b0
 **Arti Chat - Proof of Concept (current):**
 - [x] Two peers can chat p2p and decentralized.
 - [x] Routing over Tor (Arti).
-- [x] ed25519 message signing.
+- [x] ~~ed25519 message signing~~ Replaced with e2ee (AEAD).
 - [x] Simple GUI.
 - [x] Encrypted local sqlite database.
 - [x] Extensible RPC implementation.
