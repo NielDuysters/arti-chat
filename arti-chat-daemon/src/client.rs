@@ -95,49 +95,65 @@ impl std::str::FromStr for ClientConfigKey {
 }
 
 impl Client {
-    async fn ensure_session(
-        &self,
-        peer_onion: &str,
-    ) -> Result<tokio::sync::MutexGuard<'_, HashMap<String, session::Session>>, error::ClientError> {
-        let my_onion = self.get_identity_unredacted()?;
-        let mut sessions = self.sessions.lock().await;
 
+async fn ensure_session(
+    &self,
+    peer_onion: &str,
+) -> Result<(), error::ClientError> {
+    let my_onion = self.get_identity_unredacted()?;
+
+    // ---- FAST PATH: check without holding lock long ----
+    {
+        let sessions = self.sessions.lock().await;
         if sessions.contains_key(peer_onion) {
-            return Ok(sessions);
+            return Ok(());
         }
+    } // 👈 lock dropped here
 
-        // --- perform handshake ---
-        let contact = db::ContactDb::retrieve(peer_onion, self.db_conn.clone()).await?;
-        let peer_verify = session::verifying_key_from_hex(&contact.public_key)?;
+    tracing::debug!("ENSURE SESSION: performing handshake");
 
-        let (init, my_eph) =
-            session::initiate_handshake(&my_onion, peer_onion, &self.private_key);
+    // ---- HANDSHAKE (NO SESSION LOCK HELD) ----
+    let contact = db::ContactDb::retrieve(peer_onion, self.db_conn.clone()).await?;
+    let peer_verify = session::verifying_key_from_hex(&contact.public_key)?;
 
-        let mut stream = self
-            .tor_client
-            .lock()
-            .await
-            .connect(&format!("{peer_onion}:80"))
-            .await?;
+    let (init, my_eph) =
+        session::initiate_handshake(&my_onion, peer_onion, &self.private_key);
 
-        let mut out = serde_json::to_string(&init)?;
-        out.push('\0');
-        stream.write_all(out.as_bytes()).await?;
+    tracing::debug!("ENSURE SESSION: B");
+    let mut stream = self
+        .tor_client
+        .lock()
+        .await
+        .connect(&format!("{peer_onion}:80"))
+        .await?;
+    tracing::debug!("ENSURE SESSION: C");
 
-        let reply_raw = session::read_null_terminated(&mut stream).await?;
-        let reply: session::Handshake = serde_json::from_str(&reply_raw)?;
+    let mut out = serde_json::to_string(&init)?;
+    out.push('\0');
+    stream.write_all(out.as_bytes()).await?;
+    
+        tracing::debug!("ENSURE SESSION: D");
 
-        let sess = session::complete_handshake(
-            &reply,
-            &my_onion,
-            &peer_verify,
-            my_eph,
-            true, // initiator
-        )?;
+    let reply_raw = session::read_null_terminated(&mut stream).await?;
+    let reply: session::Handshake = serde_json::from_str(&reply_raw)?;
+        tracing::debug!("ENSURE SESSION: E");
 
-        sessions.insert(peer_onion.to_string(), sess);
-        Ok(sessions)
-    }
+    let sess = session::complete_handshake(
+        &reply,
+        &my_onion,
+        &peer_verify,
+        my_eph,
+        true, // initiator
+    )?;
+
+    // ---- STORE SESSION ----
+    tracing::debug!("ENSURE SESSION: A");
+    let mut sessions = self.sessions.lock().await;
+    sessions.insert(peer_onion.to_string(), sess);
+    tracing::debug!("ENSURE SESSION: OK");
+
+    Ok(())
+}
 
 
     /// Launch chat client.
@@ -286,8 +302,12 @@ impl Client {
         let my_onion = self.get_identity_unredacted()?;
 
         // 1) ensure session
-        let mut sessions = self.ensure_session(to_onion_id).await?;
-        let session = sessions.get_mut(to_onion_id).unwrap();
+        self.ensure_session(to_onion_id).await?;
+
+let mut sessions = self.sessions.lock().await;
+let session = sessions.get_mut(to_onion_id).unwrap();
+
+        tracing::debug!("SMTP A");
 
         // 2) encrypt
         #[derive(serde::Serialize)]
@@ -601,6 +621,8 @@ impl Client {
             IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
                 // Accept incoming stream
                 let mut stream = request.accept(Connected::new_empty()).await?;
+
+                tracing::debug!("REACHED HANDLE_REQ");
 
                 // Read exactly one framed message
                 let body = session::read_null_terminated(&mut stream).await?;
