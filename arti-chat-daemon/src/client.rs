@@ -145,7 +145,7 @@ stream.flush().await?;
         &my_onion,
         &peer_verify,
         my_eph,
-        i_am_initiator(&my_onion, peer_onion), // initiator
+        true, // initiator
     )?;
 
     // ---- STORE SESSION ----
@@ -678,7 +678,8 @@ let session = sessions.get_mut(to_onion_id).unwrap();
                         &my_onion_id,
                         &peer_verify,
                         my_eph,
-                        i_am_initiator(&my_onion_id, &handshake.from), // responder
+                        false,
+                        //i_am_initiator(&my_onion_id, &handshake.from), // responder
                     )?;
 
                     tracing::debug!("HANDSHAKE F");

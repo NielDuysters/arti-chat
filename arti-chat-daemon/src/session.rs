@@ -215,9 +215,14 @@ pub fn decrypt(session: &mut Session, msg: &Encrypted) -> Result<Vec<u8>, Client
     session.recv_chain = next;
 
     let cipher = ChaCha20Poly1305::new(Key::from_slice(&msg_key));
-    cipher
-        .decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref())
-        .map_err(|_| ClientError::ArtiBug)
+    match cipher
+        .decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref()) {
+        Ok(c) => return Ok(c),
+        Err(e) => {
+            println!("Error decrypting: {:?}", e);
+            return Err(ClientError::ArtiBug);
+        }
+    }
 }
 
 //
