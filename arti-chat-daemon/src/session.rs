@@ -1,11 +1,17 @@
-//! Minimal authenticated session with forward secrecy (single ratchet),
-//! now with out-of-order message support via a skipped-message-key cache.
+//! Minimal authenticated session with forward secrecy (single ratchet).
+//!
+//! Simplified version:
+//! - No counters
+//! - No out-of-order handling
+//! - No skipped-key cache
+//!
+//! Assumption: messages are processed in-order and never resent.
 
 use chacha20poly1305::{
     aead::{Aead, KeyInit},
     ChaCha20Poly1305, Key, Nonce,
 };
-use ed25519_dalek::{SigningKey, VerifyingKey, Signer};
+use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use hkdf::Hkdf;
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
@@ -13,11 +19,7 @@ use sha2::Sha256;
 use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::Zeroize;
 
-use std::collections::BTreeMap;
-
 use crate::error::ClientError;
-
-const MAX_SKIP: u32 = 2000; // cap to limit DoS/memory growth; tune as you like
 
 //
 // ===== Session state =====
@@ -27,22 +29,12 @@ const MAX_SKIP: u32 = 2000; // cap to limit DoS/memory growth; tune as you like
 pub struct Session {
     pub send_chain: [u8; 32],
     pub recv_chain: [u8; 32],
-    pub send_count: u32,
-    pub recv_count: u32,
-
-    /// Cached message keys for skipped counters (out-of-order support).
-    /// Keyed by message counter.
-    pub skipped: BTreeMap<u32, [u8; 32]>,
 }
 
 impl Drop for Session {
     fn drop(&mut self) {
         self.send_chain.zeroize();
         self.recv_chain.zeroize();
-        for (_k, v) in self.skipped.iter_mut() {
-            v.zeroize();
-        }
-        self.skipped.clear();
     }
 }
 
@@ -58,7 +50,8 @@ pub struct Handshake {
     pub sig: String,
 }
 
-/// Build transcript for handshake signature (domain separated & versioned).
+/// Domain-separated transcript for signing the ephemeral X25519 pubkey.
+/// (Keep this stable and versioned.)
 fn transcript(from: &str, to: &str, eph_pub: &[u8; 32]) -> Vec<u8> {
     let mut v = Vec::new();
     v.extend_from_slice(b"arti-chat/handshake/v1");
@@ -71,7 +64,7 @@ fn transcript(from: &str, to: &str, eph_pub: &[u8; 32]) -> Vec<u8> {
     v
 }
 
-/// Initiator: create handshake and ephemeral secret.
+/// Initiator: create Handshake + return ephemeral secret.
 pub fn initiate_handshake(
     my_onion: &str,
     peer_onion: &str,
@@ -94,7 +87,8 @@ pub fn initiate_handshake(
     )
 }
 
-/// Responder: verify handshake and reply.
+/// Responder: verify initiator handshake + create reply handshake.
+/// Returns (reply_handshake, responder_ephemeral_secret).
 pub fn accept_handshake(
     h: &Handshake,
     my_onion: &str,
@@ -126,7 +120,11 @@ pub fn accept_handshake(
     ))
 }
 
-/// Finalize handshake and derive session keys.
+/// Finalize handshake and derive the session (send_chain, recv_chain).
+///
+/// IMPORTANT:
+/// - Initiator uses (send=a, recv=b)
+/// - Responder uses (send=b, recv=a)
 pub fn complete_handshake(
     reply: &Handshake,
     my_onion: &str,
@@ -134,38 +132,33 @@ pub fn complete_handshake(
     my_eph: StaticSecret,
     initiator: bool,
 ) -> Result<Session, ClientError> {
-    tracing::debug!("CH A");
     if reply.to != my_onion {
         return Err(ClientError::ArtiBug);
     }
-    tracing::debug!("CH B");
 
+    // Verify reply signature
     let t = transcript(&reply.from, &reply.to, &reply.eph_pub);
     let sig: ed25519_dalek::Signature = reply.sig.parse()?;
     peer_verify.verify_strict(&t, &sig)?;
 
-    tracing::debug!("CH C");
+    // Compute shared secret
     let peer_pub = PublicKey::from(reply.eph_pub);
     let shared = my_eph.diffie_hellman(&peer_pub);
 
+    // Derive two chain keys
     let hk = Hkdf::<Sha256>::new(None, shared.as_bytes());
-
-    tracing::debug!("CH D");
     let mut a = [0u8; 32];
     let mut b = [0u8; 32];
-    hk.expand(b"arti-chat/chain-a", &mut a).map_err(|_| ClientError::ArtiBug)?;
-    hk.expand(b"arti-chat/chain-b", &mut b).map_err(|_| ClientError::ArtiBug)?;
+    hk.expand(b"arti-chat/chain-a/v1", &mut a)
+        .map_err(|_| ClientError::ArtiBug)?;
+    hk.expand(b"arti-chat/chain-b/v1", &mut b)
+        .map_err(|_| ClientError::ArtiBug)?;
 
-    tracing::debug!("CH E");
     let (send, recv) = if initiator { (a, b) } else { (b, a) };
 
-    tracing::debug!("CH F");
     Ok(Session {
         send_chain: send,
         recv_chain: recv,
-        send_count: 0,
-        recv_count: 0,
-        skipped: BTreeMap::new(),
     })
 }
 
@@ -175,21 +168,22 @@ pub fn complete_handshake(
 
 #[derive(Serialize, Deserialize)]
 pub struct Encrypted {
-    pub from_onion_id: String, // keep in your wire format for lookup
-    pub counter: u32,
+    pub from_onion_id: String,
     pub nonce: [u8; 12],
     pub data: Vec<u8>,
 }
 
-/// One symmetric-ratchet step: derive message key and next chain key.
+/// One ratchet step:
+/// - input: chain_key
+/// - output: (msg_key, next_chain_key)
 fn ratchet_step(chain: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    // Use chain key as PRK; derive two outputs with different labels.
     let hk = Hkdf::<Sha256>::from_prk(chain).expect("valid PRK");
 
     let mut msg = [0u8; 32];
     let mut next = [0u8; 32];
-
-    hk.expand(b"msg", &mut msg).unwrap();
-    hk.expand(b"next", &mut next).unwrap();
+    hk.expand(b"arti-chat/msg-key/v1", &mut msg).unwrap();
+    hk.expand(b"arti-chat/next-chain/v1", &mut next).unwrap();
 
     (msg, next)
 }
@@ -205,138 +199,26 @@ pub fn encrypt(session: &mut Session, plaintext: &[u8], from_onion_id: String) -
         .encrypt(Nonce::from_slice(&nonce), plaintext)
         .expect("encryption failed");
 
-    let msg = Encrypted {
+    Encrypted {
         from_onion_id,
-        counter: session.send_count,
         nonce,
         data,
-    };
-
-    session.send_count = session.send_count.wrapping_add(1);
-    msg
+    }
 }
 
 /// Decrypt ciphertext and advance receive ratchet.
-/// Supports out-of-order delivery via skipped-key cache.
+///
+/// NOTE: This requires in-order delivery. If messages are lost/reordered,
+/// decryption will fail and the session will be out of sync.
 pub fn decrypt(session: &mut Session, msg: &Encrypted) -> Result<Vec<u8>, ClientError> {
-    tracing::debug!(
-        "DECRYPT: recv_count={}, msg.counter={}",
-        session.recv_count,
-        msg.counter
-    );
-
-    tracing::debug!("DEBUG SESSION: {:?}", session);
-
-
-    // Case 1: message is from the past — only OK if we cached its key
-    if msg.counter < session.recv_count {
-        tracing::debug!(
-            "DECRYPT: past message (counter < recv_count), checking skipped cache"
-        );
-
-        if let Some(msg_key) = session.skipped.remove(&msg.counter) {
-            tracing::debug!(
-                "DECRYPT: found cached skipped key for counter={}",
-                msg.counter
-            );
-
-            let cipher = ChaCha20Poly1305::new(Key::from_slice(&msg_key));
-            let pt = cipher
-                .decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref())
-                .map_err(|_| {
-                    tracing::warn!("DECRYPT: failed to decrypt skipped message");
-                    ClientError::ArtiBug
-                })?;
-
-            return Ok(pt);
-        }
-
-        tracing::warn!(
-            "DECRYPT: past message but no cached key (counter={})",
-            msg.counter
-        );
-        return Err(ClientError::ArtiBug);
-    }
-
-    // Case 2: message is too far in the future — reject (DoS protection)
-    let gap = msg.counter.saturating_sub(session.recv_count);
-    if gap > MAX_SKIP {
-        tracing::warn!(
-            "DECRYPT: message too far in future (gap={} > MAX_SKIP={})",
-            gap,
-            MAX_SKIP
-        );
-        return Err(ClientError::ArtiBug);
-    }
-
-    // Case 3: message is in the future — derive and cache skipped keys
-    if msg.counter > session.recv_count {
-        tracing::debug!(
-            "DECRYPT: message ahead by {} — deriving skipped keys",
-            gap
-        );
-    }
-
-    while session.recv_count < msg.counter {
-        tracing::debug!(
-            "DECRYPT: deriving skipped key for counter={}",
-            session.recv_count
-        );
-
-        let (mk, next) = ratchet_step(&session.recv_chain);
-        session.recv_chain = next;
-
-        // Cache key for this skipped counter
-        session.skipped.insert(session.recv_count, mk);
-
-        session.recv_count = session.recv_count.wrapping_add(1);
-
-        // Optional: enforce cache size (BTreeMap makes eviction easy)
-        while session.skipped.len() as u32 > MAX_SKIP {
-            if let Some((&k, _)) = session.skipped.iter().next() {
-                tracing::warn!(
-                    "DECRYPT: evicting skipped key for counter={} (cache limit)",
-                    k
-                );
-                if let Some(mut v) = session.skipped.remove(&k) {
-                    v.zeroize();
-                }
-            } else {
-                break;
-            }
-        }
-    }
-
-    // Now msg.counter == session.recv_count → decrypt normally
-    tracing::debug!(
-        "DECRYPT: decrypting expected message (counter={})",
-        msg.counter
-    );
-
     let (msg_key, next) = ratchet_step(&session.recv_chain);
     session.recv_chain = next;
 
     let cipher = ChaCha20Poly1305::new(Key::from_slice(&msg_key));
-    let plaintext = cipher
+    cipher
         .decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref())
-        .map_err(|_| {
-            tracing::warn!(
-                "DECRYPT: failed to decrypt message at counter={}",
-                msg.counter
-            );
-            ClientError::ArtiBug
-        })?;
-
-    session.recv_count = session.recv_count.wrapping_add(1);
-
-    tracing::debug!(
-        "DECRYPT: success, new recv_count={}",
-        session.recv_count
-    );
-
-    Ok(plaintext)
+        .map_err(|_| ClientError::ArtiBug)
 }
-
 
 //
 // ===== Utilities =====
@@ -344,9 +226,7 @@ pub fn decrypt(session: &mut Session, msg: &Encrypted) -> Result<Vec<u8>, Client
 
 pub fn verifying_key_from_hex(hex_pk: &str) -> Result<VerifyingKey, ClientError> {
     let bytes = hex::decode(hex_pk)?;
-    let arr: [u8; 32] = bytes
-        .try_into()
-        .map_err(|_| ClientError::InvalidKeyLength)?;
+    let arr: [u8; 32] = bytes.try_into().map_err(|_| ClientError::InvalidKeyLength)?;
     Ok(VerifyingKey::from_bytes(&arr)?)
 }
 
@@ -358,8 +238,6 @@ pub async fn read_null_terminated<S: tokio::io::AsyncRead + Unpin>(
 
     let mut buf = Vec::new();
     let mut byte = [0u8; 1];
-
-    tracing::debug!("RNT A");
 
     loop {
         match stream.read(&mut byte).await {
@@ -375,7 +253,6 @@ pub async fn read_null_terminated<S: tokio::io::AsyncRead + Unpin>(
         }
     }
 
-    tracing::debug!("RNT B");
     Ok(String::from_utf8_lossy(&buf).to_string())
 }
 
