@@ -331,6 +331,8 @@ let session = sessions.get_mut(to_onion_id).unwrap();
             my_onion,
         );
 
+        tracing::debug!("SMPT B");
+
         drop(sessions); // release lock before network I/O
 
         // 3) send
@@ -340,12 +342,14 @@ let session = sessions.get_mut(to_onion_id).unwrap();
             .await
             .connect(&format!("{to_onion_id}:80"))
         .await?;
+        tracing::debug!("SMPT C");
 
         let mut msg = serde_json::to_string(&encrypted)?;
         msg.push('\0');
         stream.write_all(msg.as_bytes()).await?;
         stream.flush().await?;
 
+        tracing::debug!("SMPT OK");
         Ok(())
     }
 

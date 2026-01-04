@@ -219,24 +219,67 @@ pub fn encrypt(session: &mut Session, plaintext: &[u8], from_onion_id: String) -
 /// Decrypt ciphertext and advance receive ratchet.
 /// Supports out-of-order delivery via skipped-key cache.
 pub fn decrypt(session: &mut Session, msg: &Encrypted) -> Result<Vec<u8>, ClientError> {
+    tracing::debug!(
+        "DECRYPT: recv_count={}, msg.counter={}",
+        session.recv_count,
+        msg.counter
+    );
+
     // Case 1: message is from the past — only OK if we cached its key
     if msg.counter < session.recv_count {
+        tracing::debug!(
+            "DECRYPT: past message (counter < recv_count), checking skipped cache"
+        );
+
         if let Some(msg_key) = session.skipped.remove(&msg.counter) {
+            tracing::debug!(
+                "DECRYPT: found cached skipped key for counter={}",
+                msg.counter
+            );
+
             let cipher = ChaCha20Poly1305::new(Key::from_slice(&msg_key));
-            let pt = cipher.decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref()).map_err(|_| ClientError::ArtiBug)?;
+            let pt = cipher
+                .decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref())
+                .map_err(|_| {
+                    tracing::warn!("DECRYPT: failed to decrypt skipped message");
+                    ClientError::ArtiBug
+                })?;
+
             return Ok(pt);
         }
+
+        tracing::warn!(
+            "DECRYPT: past message but no cached key (counter={})",
+            msg.counter
+        );
         return Err(ClientError::ArtiBug);
     }
 
     // Case 2: message is too far in the future — reject (DoS protection)
     let gap = msg.counter.saturating_sub(session.recv_count);
     if gap > MAX_SKIP {
+        tracing::warn!(
+            "DECRYPT: message too far in future (gap={} > MAX_SKIP={})",
+            gap,
+            MAX_SKIP
+        );
         return Err(ClientError::ArtiBug);
     }
 
     // Case 3: message is in the future — derive and cache skipped keys
+    if msg.counter > session.recv_count {
+        tracing::debug!(
+            "DECRYPT: message ahead by {} — deriving skipped keys",
+            gap
+        );
+    }
+
     while session.recv_count < msg.counter {
+        tracing::debug!(
+            "DECRYPT: deriving skipped key for counter={}",
+            session.recv_count
+        );
+
         let (mk, next) = ratchet_step(&session.recv_chain);
         session.recv_chain = next;
 
@@ -247,8 +290,11 @@ pub fn decrypt(session: &mut Session, msg: &Encrypted) -> Result<Vec<u8>, Client
 
         // Optional: enforce cache size (BTreeMap makes eviction easy)
         while session.skipped.len() as u32 > MAX_SKIP {
-            // remove smallest counter
             if let Some((&k, _)) = session.skipped.iter().next() {
+                tracing::warn!(
+                    "DECRYPT: evicting skipped key for counter={} (cache limit)",
+                    k
+                );
                 if let Some(mut v) = session.skipped.remove(&k) {
                     v.zeroize();
                 }
@@ -259,15 +305,35 @@ pub fn decrypt(session: &mut Session, msg: &Encrypted) -> Result<Vec<u8>, Client
     }
 
     // Now msg.counter == session.recv_count → decrypt normally
+    tracing::debug!(
+        "DECRYPT: decrypting expected message (counter={})",
+        msg.counter
+    );
+
     let (msg_key, next) = ratchet_step(&session.recv_chain);
     session.recv_chain = next;
 
     let cipher = ChaCha20Poly1305::new(Key::from_slice(&msg_key));
-    let plaintext = cipher.decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref()).map_err(|_| ClientError::ArtiBug)?;
+    let plaintext = cipher
+        .decrypt(Nonce::from_slice(&msg.nonce), msg.data.as_ref())
+        .map_err(|_| {
+            tracing::warn!(
+                "DECRYPT: failed to decrypt message at counter={}",
+                msg.counter
+            );
+            ClientError::ArtiBug
+        })?;
 
     session.recv_count = session.recv_count.wrapping_add(1);
+
+    tracing::debug!(
+        "DECRYPT: success, new recv_count={}",
+        session.recv_count
+    );
+
     Ok(plaintext)
 }
+
 
 //
 // ===== Utilities =====
