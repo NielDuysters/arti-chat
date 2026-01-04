@@ -356,6 +356,7 @@ let session = sessions.get_mut(to_onion_id).unwrap();
         broadcast_writers: std::sync::Arc<TokioMutex<Vec<UnboundedSender<ipc::MessageToUI>>>>,
     ) -> Result<(), error::ClientError> {
         loop {
+            break Ok(());
             let failed_messages = db::MessageDb::failed_messages(self.db_conn.clone()).await?;
             for msg in &failed_messages {
                 tracing::info!("Retrying message {}", msg.id);
@@ -639,25 +640,31 @@ let session = sessions.get_mut(to_onion_id).unwrap();
                 if let Ok(handshake) = serde_json::from_str::<session::Handshake>(&body) {
                     // --- HANDSHAKE PATH ---
 
+                    tracing::debug!("HANDSHAKE A");
+
                     // Must be addressed to us
                     if handshake.to != my_onion_id {
                         return Ok(());
                     }
+                    tracing::debug!("HANDSHAKE B");
 
                     // Lookup sender identity key
                     let contact = db::ContactDb::retrieve(&handshake.from, db_conn.clone()).await?;
                     let peer_verify =
                     session::verifying_key_from_hex(&contact.public_key)?;
+                    tracing::debug!("HANDSHAKE C");
 
                     // Accept handshake
                     let (reply, my_eph) =
                     session::accept_handshake(&handshake, &my_onion_id, &peer_verify, &signing_key)?;
+                    tracing::debug!("HANDSHAKE D");
 
                     // Send reply
                     let mut out = serde_json::to_string(&reply)?;
                     out.push('\0');
                     stream.write_all(out.as_bytes()).await?;
                     stream.flush().await.ok();
+                    tracing::debug!("HANDSHAKE E");
 
                     // Finalize session (responder side)
                     let sess = session::complete_handshake(
@@ -668,6 +675,7 @@ let session = sessions.get_mut(to_onion_id).unwrap();
                         false, // responder
                     )?;
 
+                    tracing::debug!("HANDSHAKE F");
                     // Store session
                     let mut sessions = sessions.lock().await;
                     sessions.insert(handshake.from.clone(), sess);
@@ -680,22 +688,30 @@ let session = sessions.get_mut(to_onion_id).unwrap();
                     return Ok(());
                 }
 
+
+                tracing::debug!("HANDLE_REQ A");
+
                 // Otherwise it must be encrypted data
                 let encrypted: session::Encrypted = serde_json::from_str(&body)?;
 
+                tracing::debug!("HANDLE_REQ B");
                 // --- ENCRYPTED MESSAGE PATH ---
 
                 // Load session
                 let mut sessions_guard = sessions.lock().await;
+                tracing::debug!("HANDLE_REQ C");
                 let session = sessions_guard
                     .get_mut(&encrypted.from_onion_id)
                     .ok_or_else(|| {
+                        tracing::debug!("HANDLE_REQ ERR 1");
                         error::ClientError::ArtiBug
                     })?;
 
+                tracing::debug!("HANDLE_REQ D");
                 // Decrypt (handles out-of-order internally)
                 let plaintext =
                 session::decrypt(session, &encrypted)?;
+                tracing::debug!("HANDLE_REQ E");
 
                 drop(sessions_guard); // release lock early
 
@@ -709,6 +725,7 @@ let session = sessions.get_mut(to_onion_id).unwrap();
 
                 let payload: PlaintextPayload =
                 serde_json::from_slice(&plaintext)?;
+                tracing::debug!("HANDLE_REQ F");
 
                 // Store message
                 db::MessageDb {

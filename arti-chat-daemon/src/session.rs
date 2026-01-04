@@ -134,26 +134,32 @@ pub fn complete_handshake(
     my_eph: StaticSecret,
     initiator: bool,
 ) -> Result<Session, ClientError> {
+    tracing::debug!("CH A");
     if reply.to != my_onion {
         return Err(ClientError::ArtiBug);
     }
+    tracing::debug!("CH B");
 
     let t = transcript(&reply.from, &reply.to, &reply.eph_pub);
     let sig: ed25519_dalek::Signature = reply.sig.parse()?;
     peer_verify.verify_strict(&t, &sig)?;
 
+    tracing::debug!("CH C");
     let peer_pub = PublicKey::from(reply.eph_pub);
     let shared = my_eph.diffie_hellman(&peer_pub);
 
     let hk = Hkdf::<Sha256>::new(None, shared.as_bytes());
 
+    tracing::debug!("CH D");
     let mut a = [0u8; 32];
     let mut b = [0u8; 32];
     hk.expand(b"arti-chat/chain-a", &mut a).map_err(|_| ClientError::ArtiBug)?;
     hk.expand(b"arti-chat/chain-b", &mut b).map_err(|_| ClientError::ArtiBug)?;
 
+    tracing::debug!("CH E");
     let (send, recv) = if initiator { (a, b) } else { (b, a) };
 
+    tracing::debug!("CH F");
     Ok(Session {
         send_chain: send,
         recv_chain: recv,
