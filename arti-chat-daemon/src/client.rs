@@ -11,7 +11,7 @@ use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SigningKey, VerifyingKey};
 use futures::{AsyncReadExt, AsyncWriteExt, Stream, StreamExt};
 use notify_rust::Notification;
-use tokio::sync::Mutex as TokioMutex;
+use tokio::{ sync::Mutex as TokioMutex};
 use tokio::sync::mpsc::UnboundedSender;
 use tor_cell::relaycell::msg::Connected;
 use tor_proto::client::stream::IncomingStreamRequest;
@@ -657,6 +657,9 @@ let session = sessions.get_mut(to_onion_id).unwrap();
                             "HANDSHAKE ignored: peer {} is initiator (waiting for outbound handshake)",
                             handshake.from
                         );
+
+                        stream.close().await;
+
                         return Ok(());
                     }
 
