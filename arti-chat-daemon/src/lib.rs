@@ -48,7 +48,6 @@ pub mod client;
 pub mod db;
 pub mod error;
 pub mod ipc;
-pub mod message;
 pub mod ratchet;
 pub mod rpc;
 pub mod ui_focus;

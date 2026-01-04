@@ -5,12 +5,12 @@ use crate::{
     db::{self, DbModel, DbUpdateModel},
     error,
     ipc::{self, MessageToUI},
-    message, ui_focus, PROJECT_DIR,
+    ui_focus, PROJECT_DIR,
     ratchet,
 };
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SigningKey, VerifyingKey};
-use futures::{AsyncReadExt, AsyncWriteExt, Stream, StreamExt};
+use futures::{AsyncWriteExt, Stream, StreamExt};
 use notify_rust::Notification;
 use tokio::sync::Mutex as TokioMutex;
 use tokio::sync::mpsc::UnboundedSender;
