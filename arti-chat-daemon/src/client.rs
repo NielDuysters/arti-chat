@@ -648,23 +648,6 @@ let session = sessions.get_mut(to_onion_id).unwrap();
 
                     tracing::debug!("HANDSHAKE A");
 
-                    // Determine initiator deterministically
-                    let i_am_initiator = my_onion_id < handshake.from;
-
-                    // If I am NOT the initiator, I must NOT accept a handshake I didn't initiate
-                    if !i_am_initiator {
-                        tracing::debug!(
-                            "HANDSHAKE ignored: peer {} is initiator (waiting for outbound handshake)",
-                            handshake.from
-                        );
-
-                    let mut nullb = "".to_string();
-                    nullb.push('\0');
-                    stream.write_all(nullb.as_bytes()).await?;
-                    stream.flush().await.ok();
-
-                        return Ok(());
-                    }
 
 
                     // Must be addressed to us
