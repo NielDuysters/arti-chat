@@ -307,7 +307,7 @@ stream.flush().await?;
            self.ensure_session(to_onion_id).await?;
 
 let mut sessions = self.sessions.lock().await;
-let session = sessions.get_mut(to_onion_id).unwrap();
+let session = sessions.get_mut(to_onion_id).expect("No session exists.");
 
         tracing::debug!("SMTP A");
 
