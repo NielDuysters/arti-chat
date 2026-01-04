@@ -678,7 +678,7 @@ let session = sessions.get_mut(to_onion_id).unwrap();
                         &my_onion_id,
                         &peer_verify,
                         my_eph,
-                        false, // responder
+                        i_am_initiator(&my_onion_id, &handshake.from), // responder
                     )?;
 
                     tracing::debug!("HANDSHAKE F");
