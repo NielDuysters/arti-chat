@@ -23,7 +23,7 @@ const MAX_SKIP: u32 = 2000; // cap to limit DoS/memory growth; tune as you like
 // ===== Session state =====
 //
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Session {
     pub send_chain: [u8; 32],
     pub recv_chain: [u8; 32],
@@ -224,6 +224,9 @@ pub fn decrypt(session: &mut Session, msg: &Encrypted) -> Result<Vec<u8>, Client
         session.recv_count,
         msg.counter
     );
+
+    tracing::debug!("DEBUG SESSION: {:?}", session);
+
 
     // Case 1: message is from the past — only OK if we cached its key
     if msg.counter < session.recv_count {
