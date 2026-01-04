@@ -55,27 +55,36 @@ pub async fn launch_daemon() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let status = if cfg!(target_os = "macos") {
-        let uid = nix::unistd::Uid::current();
-
-        std::process::Command::new("launchctl")
-            .args([
-                "kickstart",
-                "-k",
-                &format!("gui/{}/com.arti-chat.daemon", uid.as_raw()),
-            ])
-            .status()
-    } else if cfg!(target_os = "linux") {
-        std::process::Command::new("systemctl")
-            .args(["--user", "start", "com.arti-chat.daemon.service"])
-            .status()
-    } else {
-        anyhow::bail!(error::DesktopUiError::UnsupportedOperatingSystem);
-    }?;
+    let status = start_daemon()?;
 
     if !status.success() {
         anyhow::bail!(error::DesktopUiError::DaemonStartFailure);
     }
 
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn start_daemon() -> anyhow::Result<std::process::ExitStatus> {
+    let uid = nix::unistd::Uid::current();
+
+    Ok(std::process::Command::new("launchctl")
+        .args([
+            "kickstart",
+            "-k",
+            &format!("gui/{}/com.arti-chat.daemon", uid.as_raw()),
+        ])
+        .status()?)
+}
+
+#[cfg(target_os = "linux")]
+fn start_daemon() -> anyhow::Result<std::process::ExitStatus> {
+    Ok(std::process::Command::new("systemctl")
+        .args(["--user", "start", "com.arti-chat.daemon.service"])
+        .status()?)
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+fn start_daemon() -> anyhow::Result<std::process::ExitStatus> {
+    anyhow::bail!(error::DesktopUiError::UnsupportedOperatingSystem)
 }
