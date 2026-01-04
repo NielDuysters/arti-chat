@@ -3,22 +3,52 @@
 use crate::{client, error::IpcError, rpc};
 use tokio::sync::Mutex as TokioMutex;
 use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    net::UnixListener,
-    net::unix::{OwnedReadHalf, OwnedWriteHalf},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, WriteHalf, ReadHalf},
     sync::mpsc::{self, UnboundedSender},
 };
+ use interprocess::local_socket::{
+            tokio::{prelude::*, Stream},
+            GenericFilePath, GenericNamespaced, ListenerOptions};
 
-/// Possible paths for UnixSockets.
+/// Names for sockets.
 #[non_exhaustive]
-pub struct SocketPaths;
+pub struct SocketNames;
 
-impl SocketPaths {
-    /// Socket for RPC (send + reply).
-    pub const RPC: &str = "/tmp/arti-chat.rpc.sock";
+impl SocketNames {
+    const BROADCAST_FS: &'static str = "/tmp/arti-chat.broadcast.sock";
+    const RPC_FS: &'static str = "/tmp/arti-chat.rpc.sock";
 
-    /// Socket for broadcasting (fire and forget).
-    pub const BROADCAST: &str = "/tmp/arti-chat.broadcast.sock";
+    /// Broadcast socket name.
+    pub fn broadcast() -> interprocess::local_socket::Name<'static> {
+        if GenericNamespaced::is_supported() {
+            "arti-chat.broadcast.sock"
+                .to_ns_name::<GenericNamespaced>()
+                .unwrap()
+        } else {
+            Self::BROADCAST_FS
+                .to_fs_name::<GenericFilePath>()
+                .unwrap()
+        }
+    }
+
+    /// RPC socket name.
+    pub fn rpc() -> interprocess::local_socket::Name<'static> {
+        if GenericNamespaced::is_supported() {
+            "arti-chat.rpc.sock"
+                .to_ns_name::<GenericNamespaced>()
+                .unwrap()
+        } else {
+            Self::RPC_FS
+                .to_fs_name::<GenericFilePath>()
+                .unwrap()
+        }
+    }
+
+    /// Cleanup zombie socket files for Unix systems.
+    pub fn cleanup_filesystem_sockets() {
+        let _ = std::fs::remove_file(Self::BROADCAST_FS);
+        let _ = std::fs::remove_file(Self::RPC_FS);
+    }
 }
 
 /// Type of message to UI.
@@ -36,19 +66,22 @@ pub async fn run_ipc_server(
     // from client.
     client: std::sync::Arc<client::Client>,
 ) -> Result<(), IpcError> {
+    SocketNames::cleanup_filesystem_sockets();
+
     // Bind broadcast socket.
     // Used for fire and forget-messages for when we do not expect a reply from the UI.
     // E.g: When the daemon wants to push an incoming message to the UI.
-    let _ = std::fs::remove_file(SocketPaths::BROADCAST);
-    let broadcast_listener = UnixListener::bind(SocketPaths::BROADCAST)?;
-    tracing::info!("Broadcast IPC listening at: {}", SocketPaths::BROADCAST);
+    let opts_broadcast = ListenerOptions::new().name(SocketNames::broadcast());
+    let broadcast_listener = opts_broadcast.create_tokio()?;
+    tracing::info!("Broadcast IPC listening at: {:?}", SocketNames::broadcast());
 
     // Bind RPC socket.
     // Used for RPC commands for which the UI expects a reply.
     // E.g: UI requests info of contact, we receive the RPC command and send a reply.
-    let _ = std::fs::remove_file(SocketPaths::RPC);
-    let rpc_listener = UnixListener::bind(SocketPaths::RPC)?;
-    tracing::info!("RPC IPC listening at: {}", SocketPaths::RPC);
+    //let _ = std::fs::remove_file(SocketPaths::RPC);
+    let opts_rpc = ListenerOptions::new().name(SocketNames::rpc());
+    let rpc_listener = opts_rpc.create_tokio()?;
+    tracing::info!("RPC IPC listening at: {:?}", SocketNames::rpc());
 
     // List of outgoing channels to subscribed UI.
     let broadcast_writers = std::sync::Arc::new(TokioMutex::new(std::vec::Vec::<
@@ -73,11 +106,11 @@ pub async fn run_ipc_server(
             }
 
             // New broadcast subscriber.
-            Ok((stream, _)) = broadcast_listener.accept() => {
+            Ok(conn) = broadcast_listener.accept() => {
                 tracing::debug!("UI subscribed to IPC broadcast channel.");
 
                 // Write_half is pipe back to the UI.
-                let (_, write_half) = stream.into_split();
+                let (_, write_half) = tokio::io::split(conn);
 
                 // - tx_broadcast: Allows daemon to transmit message to UI.
                 // - rx_broadcast: Receives incoming messages from daemon and through `ui_writer_loop` will
@@ -95,13 +128,13 @@ pub async fn run_ipc_server(
             }
 
             // New RPC request.
-            Ok((stream, _)) = rpc_listener.accept() => {
+            Ok(conn) = rpc_listener.accept() => {
                 tracing::debug!("UI sent a RPC request.");
 
                 // Write_half is pipe back to the UI.
                 // Read_half is required because we want to read the RPC command and it's
                 // arguments.
-                let (read_half, write_half) = stream.into_split();
+                let (read_half, write_half) = tokio::io::split(conn);
 
                 // - tx_rpc: Allows daemon to transmit message to UI.
                 // - rx_rpc: Receives incoming messages from daemon and through `ui_writer_loop` will
@@ -131,7 +164,7 @@ pub async fn run_ipc_server(
 /// Writes to UI whenever daemon demands it.
 async fn ui_write_loop(
     mut rx: mpsc::UnboundedReceiver<MessageToUI>, // Receives messages pushed by daemon.
-    mut write_half: OwnedWriteHalf,               // Writer handle to UI.
+    mut write_half: WriteHalf<Stream>,               // Writer handle to UI.
 ) {
     while let Some(msg) = rx.recv().await {
         let msg = match msg {
@@ -148,7 +181,7 @@ async fn ui_write_loop(
 
 /// Handle a RPC call coming from the UI.
 async fn handle_rpc_call(
-    read_half: OwnedReadHalf,             // Read incoming RPC call.
+    read_half: ReadHalf<Stream>,             // Read incoming RPC call.
     tx_rpc: UnboundedSender<MessageToUI>, // Reply to current RPC call.
     tx_broadcast: Option<UnboundedSender<MessageToUI>>, // Write to UI.
     client: std::sync::Arc<client::Client>,

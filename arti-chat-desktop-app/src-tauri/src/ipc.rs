@@ -1,20 +1,40 @@
 //! Logic to make the desktop UI communicate with the daemon using Inter-process communication.
 
+ use interprocess::local_socket::{
+            tokio::{prelude::*, Stream},
+            GenericFilePath, GenericNamespaced};
 use crate::error;
 
-pub struct SocketPaths;
-impl SocketPaths {
-    pub const BROADCAST: &str = "/tmp/arti-chat.broadcast.sock";
-    pub const RPC: &str = "/tmp/arti-chat.rpc.sock";
+/// Names for sockets.
+#[non_exhaustive]
+pub struct SocketNames;
+
+impl SocketNames {
+    pub fn rpc() -> interprocess::local_socket::Name<'static> {
+        if GenericNamespaced::is_supported() {
+            "arti-chat.rpc.sock".to_ns_name::<GenericNamespaced>().expect("Failed to convert to filesystem path-type local socket name.")
+        } else {
+            "/tmp/arti-chat.rpc.sock".to_fs_name::<GenericFilePath>().expect("Failed to convert to namespaced local socket name.")
+        }
+    }
+
+    pub fn broadcast() -> interprocess::local_socket::Name<'static> {
+        if GenericNamespaced::is_supported() {
+            "arti-chat.broadcast.sock".to_ns_name::<GenericNamespaced>().expect("Failed to convert to filesystem path-type local socket name.")
+        } else {
+            "/tmp/arti-chat.broadcast.sock".to_fs_name::<GenericFilePath>().expect("Failed to convert to namespaced local socket name.")
+        }
+    }
 }
 
+/// Connect to a local IPC socket with retry logic.
 pub async fn get_socket_stream(
-    path: &str,
+    name: interprocess::local_socket::Name<'static>,
     retries: u8,
     delay: tokio::time::Duration,
-) -> anyhow::Result<tokio::net::UnixStream> {
+) -> anyhow::Result<Stream> {
     for _ in 0..retries {
-        match tokio::net::UnixStream::connect(path).await {
+        match Stream::connect(name.clone()).await {
             Ok(stream) => return Ok(stream),
             Err(_) => tokio::time::sleep(delay).await,
         }
@@ -25,7 +45,7 @@ pub async fn get_socket_stream(
 
 pub async fn launch_daemon() -> anyhow::Result<()> {
     if get_socket_stream(
-        SocketPaths::BROADCAST,
+        SocketNames::broadcast(),
         5,
         tokio::time::Duration::from_millis(2000),
     )

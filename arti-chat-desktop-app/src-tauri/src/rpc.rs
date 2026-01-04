@@ -170,7 +170,7 @@ impl ReceiveRpcReply<SuccessResponse> for PingDaemon {}
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {
-    async fn send(&self) -> anyhow::Result<tokio::net::UnixStream> {
+    async fn send(&self) -> anyhow::Result<interprocess::local_socket::tokio::Stream> {
         // Helper method to get command name from type.
         fn cmd_name<T>() -> &'static str {
             std::any::type_name::<T>().rsplit("::").next().unwrap()
@@ -178,7 +178,7 @@ pub trait SendRpcCommand: Sized + serde::Serialize {
 
         // Make connection to RPC socket.
         let mut stream = ipc::get_socket_stream(
-            ipc::SocketPaths::RPC,
+            ipc::SocketNames::rpc(),
             2,
             tokio::time::Duration::from_millis(1000),
         )

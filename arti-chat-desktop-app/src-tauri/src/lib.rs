@@ -39,7 +39,7 @@ pub fn run() {
 
                 loop {
                     let broadcast_stream = match ipc::get_socket_stream(
-                        ipc::SocketPaths::BROADCAST,
+                        ipc::SocketNames::broadcast(),
                         20,
                         tokio::time::Duration::from_millis(1000),
                     )
