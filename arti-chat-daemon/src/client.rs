@@ -145,7 +145,7 @@ stream.flush().await?;
         &my_onion,
         &peer_verify,
         my_eph,
-        true, // initiator
+        i_am_initiator(&my_onion, peer_onion), // initiator
     )?;
 
     // ---- STORE SESSION ----
@@ -304,9 +304,7 @@ stream.flush().await?;
         let my_onion = self.get_identity_unredacted()?;
 
         // 1) ensure session
-        if i_am_initiator(&my_onion, to_onion_id) {
            self.ensure_session(to_onion_id).await?;
-    }
 
 let mut sessions = self.sessions.lock().await;
 let session = sessions.get_mut(to_onion_id).unwrap();
