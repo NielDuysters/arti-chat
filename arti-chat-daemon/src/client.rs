@@ -16,6 +16,9 @@ use tokio::sync::mpsc::UnboundedSender;
 use tor_cell::relaycell::msg::Connected;
 use tor_proto::client::stream::IncomingStreamRequest;
 
+use crate::session;
+use std::collections::HashMap;
+
 /// Type for TorClient with runtime.
 type ArtiTorClient = arti_client::TorClient<tor_rtcompat::PreferredRuntime>;
 /// Type for hidden service request stream behind boxed smart pointer.
@@ -45,6 +48,8 @@ pub struct Client {
 
     /// Private key of user to sign chat messages.
     private_key: SigningKey,
+
+    sessions: std::sync::Arc<TokioMutex<HashMap<String, session::Session>>>,
 }
 
 /// Client configuration from database.
@@ -90,6 +95,51 @@ impl std::str::FromStr for ClientConfigKey {
 }
 
 impl Client {
+    async fn ensure_session(
+        &self,
+        peer_onion: &str,
+    ) -> Result<tokio::sync::MutexGuard<'_, HashMap<String, session::Session>>, error::ClientError> {
+        let my_onion = self.get_identity_unredacted()?;
+        let mut sessions = self.sessions.lock().await;
+
+        if sessions.contains_key(peer_onion) {
+            return Ok(sessions);
+        }
+
+        // --- perform handshake ---
+        let contact = db::ContactDb::retrieve(peer_onion, self.db_conn.clone()).await?;
+        let peer_verify = session::verifying_key_from_hex(&contact.public_key)?;
+
+        let (init, my_eph) =
+            session::initiate_handshake(&my_onion, peer_onion, &self.private_key);
+
+        let mut stream = self
+            .tor_client
+            .lock()
+            .await
+            .connect(&format!("{peer_onion}:80"))
+            .await?;
+
+        let mut out = serde_json::to_string(&init)?;
+        out.push('\0');
+        stream.write_all(out.as_bytes()).await?;
+
+        let reply_raw = session::read_null_terminated(&mut stream).await?;
+        let reply: session::Handshake = serde_json::from_str(&reply_raw)?;
+
+        let sess = session::complete_handshake(
+            &reply,
+            &my_onion,
+            &peer_verify,
+            my_eph,
+            true, // initiator
+        )?;
+
+        sessions.insert(peer_onion.to_string(), sess);
+        Ok(sessions)
+    }
+
+
     /// Launch chat client.
     /// Bootstrap TorClient + launch onion service + ...
     pub async fn launch(db_conn: DatabaseConnection) -> Result<Self, error::ClientError> {
@@ -131,10 +181,12 @@ impl Client {
             onion_service,
             request_stream,
             private_key,
+            sessions: std::sync::Arc::new(TokioMutex::new(HashMap::new())),
         })
     }
 
     /// Main entrypoint/loop to accept requests from our hidden onion service.
+    /*
     pub async fn serve(
         &self,
         message_tx: tokio::sync::mpsc::UnboundedSender<String>,
@@ -153,9 +205,50 @@ impl Client {
         }
 
         Ok(())
+    }*/
+
+    pub async fn serve(
+        &self,
+        message_tx: tokio::sync::mpsc::UnboundedSender<String>,
+    ) -> Result<(), error::ClientError> {
+        let mut request_stream = self.request_stream.lock().await;
+        let requests = tor_hsservice::handle_rend_requests(&mut *request_stream);
+        tokio::pin!(requests);
+
+        // Capture shared state once
+        let sessions = self.sessions.clone();
+        let signing_key = self.private_key.clone();
+        let my_onion_id = self.get_identity_unredacted()?;
+
+        while let Some(request) = requests.next().await {
+            let message_tx = message_tx.clone();
+            let db_conn = self.db_conn.clone();
+            let client_config = self.config.clone();
+
+            let sessions = sessions.clone();
+            let signing_key = signing_key.clone();
+            let my_onion_id = my_onion_id.clone();
+
+            tokio::spawn(async move {
+                let _ = Client::handle_request(
+                    request,
+                    message_tx,
+                    db_conn,
+                    client_config,
+                    my_onion_id,
+                    signing_key,
+                    sessions,
+                )
+                .await;
+            });
+        }
+
+        Ok(())
     }
 
+
     /// Send message to peer.
+    /*
     pub async fn send_message_to_peer(
         &self,
         to_onion_id: &str,
@@ -183,7 +276,56 @@ impl Client {
         stream.flush().await.ok();
 
         Ok(())
+    }*/
+
+    pub async fn send_message_to_peer(
+        &self,
+        to_onion_id: &str,
+        text: &str,
+    ) -> Result<(), error::ClientError> {
+        let my_onion = self.get_identity_unredacted()?;
+
+        // 1) ensure session
+        let mut sessions = self.ensure_session(to_onion_id).await?;
+        let session = sessions.get_mut(to_onion_id).unwrap();
+
+        // 2) encrypt
+        #[derive(serde::Serialize)]
+        struct Plaintext {
+            onion_id: String,
+            text: String,
+            timestamp: i64,
+        }
+
+        let plain = Plaintext {
+            onion_id: my_onion.clone(),
+            text: text.to_string(),
+            timestamp: chrono::Utc::now().timestamp(),
+        };
+
+        let encrypted = session::encrypt(
+            session,
+            &serde_json::to_vec(&plain)?,
+            my_onion,
+        );
+
+        drop(sessions); // release lock before network I/O
+
+        // 3) send
+        let mut stream = self
+            .tor_client
+            .lock()
+            .await
+            .connect(&format!("{to_onion_id}:80"))
+        .await?;
+
+        let mut msg = serde_json::to_string(&encrypted)?;
+        msg.push('\0');
+        stream.write_all(msg.as_bytes()).await?;
+
+        Ok(())
     }
+
 
     /// Retry sending failed messages.
     pub async fn retry_failed_messages(
@@ -365,6 +507,7 @@ impl Client {
     }
 
     /// Handle request from client to open new stream to our onion service.
+    /*
     async fn handle_request(
         request: tor_hsservice::StreamRequest,
         message_tx: tokio::sync::mpsc::UnboundedSender<String>, // Used to send incoming messages
@@ -441,5 +584,141 @@ impl Client {
                 Ok(())
             }
         }
+    }*/
+
+    async fn handle_request(
+        request: tor_hsservice::StreamRequest,
+        message_tx: tokio::sync::mpsc::UnboundedSender<String>,
+        db_conn: DatabaseConnection,
+        client_config: ClientConfigType,
+        my_onion_id: String,
+        signing_key: SigningKey,
+        sessions: std::sync::Arc<tokio::sync::Mutex<
+        std::collections::HashMap<String, session::Session>,
+        >>,
+    ) -> Result<(), error::ClientError> {
+        match request.request() {
+            IncomingStreamRequest::Begin(begin) if begin.port() == 80 => {
+                // Accept incoming stream
+                let mut stream = request.accept(Connected::new_empty()).await?;
+
+                // Read exactly one framed message
+                let body = session::read_null_terminated(&mut stream).await?;
+                if body.is_empty() {
+                    return Ok(());
+                }
+
+                tracing::debug!("Incoming: {}", body);
+
+                // First try handshake
+                if let Ok(handshake) = serde_json::from_str::<session::Handshake>(&body) {
+                    // --- HANDSHAKE PATH ---
+
+                    // Must be addressed to us
+                    if handshake.to != my_onion_id {
+                        return Ok(());
+                    }
+
+                    // Lookup sender identity key
+                    let contact = db::ContactDb::retrieve(&handshake.from, db_conn.clone()).await?;
+                    let peer_verify =
+                    session::verifying_key_from_hex(&contact.public_key)?;
+
+                    // Accept handshake
+                    let (reply, my_eph) =
+                    session::accept_handshake(&handshake, &my_onion_id, &peer_verify, &signing_key)?;
+
+                    // Send reply
+                    let mut out = serde_json::to_string(&reply)?;
+                    out.push('\0');
+                    stream.write_all(out.as_bytes()).await?;
+                    stream.flush().await.ok();
+
+                    // Finalize session (responder side)
+                    let sess = session::complete_handshake(
+                        &reply,
+                        &my_onion_id,
+                        &peer_verify,
+                        my_eph,
+                        false, // responder
+                    )?;
+
+                    // Store session
+                    let mut sessions = sessions.lock().await;
+                    sessions.insert(handshake.from.clone(), sess);
+
+                    tracing::info!(
+                        "Session established with {}",
+                        handshake.from
+                    );
+
+                    return Ok(());
+                }
+
+                // Otherwise it must be encrypted data
+                let encrypted: session::Encrypted = serde_json::from_str(&body)?;
+
+                // --- ENCRYPTED MESSAGE PATH ---
+
+                // Load session
+                let mut sessions_guard = sessions.lock().await;
+                let session = sessions_guard
+                    .get_mut(&encrypted.from_onion_id)
+                    .ok_or_else(|| {
+                        error::ClientError::ArtiBug
+                    })?;
+
+                // Decrypt (handles out-of-order internally)
+                let plaintext =
+                session::decrypt(session, &encrypted)?;
+
+                drop(sessions_guard); // release lock early
+
+                // Parse decrypted payload
+                #[derive(serde::Deserialize, serde::Serialize)]
+                struct PlaintextPayload {
+                    onion_id: String,
+                    text: String,
+                    timestamp: i64,
+                }
+
+                let payload: PlaintextPayload =
+                serde_json::from_slice(&plaintext)?;
+
+                // Store message
+                db::MessageDb {
+                    id: 0,
+                    contact_onion_id: payload.onion_id.clone(),
+                    body: payload.text.clone(),
+                    timestamp: payload.timestamp as i32,
+                    is_incoming: true,
+                    sent_status: false,
+                    verified_status: true, // session-authenticated
+                }
+                    .insert(db_conn.clone())
+                .await?;
+
+                // Send to UI
+                let _ = message_tx.send(serde_json::to_string(&payload)?);
+
+                // Notification
+                let cfg = client_config.lock().await;
+                if cfg.enable_notifications && !ui_focus::is_focussed() {
+                    let _ = notify_rust::Notification::new()
+                        .summary("Arti Chat")
+                        .body("New message received")
+                        .show();
+                }
+
+                Ok(())
+            }
+
+            _ => {
+                let _ = request.shutdown_circuit();
+                Ok(())
+            }
+        }
     }
+
+
 }

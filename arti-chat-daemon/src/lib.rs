@@ -50,6 +50,7 @@ pub mod error;
 pub mod ipc;
 pub mod message;
 pub mod rpc;
+pub mod session;
 pub mod ui_focus;
 
 /// Project directory storing sqlite db + config.
