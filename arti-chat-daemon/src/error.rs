@@ -88,6 +88,10 @@ pub enum ClientError {
     /// Invalid config key.
     #[error("Invalid config key.")]
     InvalidConfigKey,
+    
+    /// Ratchet Error.
+    #[error("Ratchet error: {0}")]
+    RatchetError(#[from] RatchetError),
 }
 
 /// Errors related to database.
@@ -168,4 +172,37 @@ pub enum MessageError {
     /// Ed25519 error.
     #[error("ed25519 error: {0}")]
     Ed25519Error(#[from] ed25519_dalek::ed25519::Error),
+}
+
+/// Errors related to ratchet algorithm and message encryption logic.
+#[non_exhaustive]
+#[derive(Error, Debug)]
+pub enum RatchetError {
+    /// Handshake target does not match self.
+    #[error("Invalid handshake target.")]
+    InvalidHandshakeTarget,
+    
+    /// Ed25519 error.
+    #[error("ed25519 error: {0}")]
+    Ed25519Error(#[from] ed25519_dalek::ed25519::Error),
+    
+    /// HKDF invalid length.
+    #[error("HKDF invalid length.")]
+    HkdfInvalidLength,
+
+    /// Error decrypting message.
+    #[error("Failed to decrypt message.")]
+    MessageDecryptError,
+    
+    /// Invalid key length.
+    #[error("Key length is not 32 bytes.")]
+    InvalidKeyLength,
+
+    /// Hex decode error.
+    #[error("Hex decode error: {0}")]
+    HexDecodeError(#[from] hex::FromHexError),
+    
+    /// I/O Error.
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
 }
