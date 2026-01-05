@@ -26,7 +26,7 @@
 > [!WARNING]  
 > Arti Chat is not yet suitable to be used in real-world scenarios.
 
-This is a hobby project still under heavy development. Today Arti Chat is a proof of concept to experiment and test with. A lot of work on the code and architecture is required before even an alpha version will be released. It can only be run on *nix systems like Linux or macOS, Windows is not yet supported.
+This is a hobby project still under heavy development. Today Arti Chat is a proof of concept to experiment and test with. A lot of work on the code and architecture is required before even an alpha version will be released.
 
 I am open to feedback.
 
@@ -49,13 +49,17 @@ This project is made in the Rust programming language and Tauri for the GUI. The
 - Tauri ([install guide](https://tauri.app/start/create-project/#using-create-tauri-app), [install tauri-cli](https://v2.tauri.app/reference/cli/))
 - npm ([install guide](https://nodejs.org/en/download/))
 
-### Installation script
+### Installation script (Unix)
 
 Execute the following command in your terminal to run [`developer-install.sh`](developer-install.sh) which is a Bash script. 
 
 ```
 curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/0bedcbf769b0c769235ef6f8dab0b809ad4fb64d/developer-install.sh | bash
 ```
+
+### Installation Microsoft Windows
+
+The instructions for installation on Microsoft Windows can be found [here](microsoft-windows-install.md).
 
 ## Roadmap
 
@@ -84,7 +88,7 @@ curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/0bedcbf769b0
 - [ ] Cleanup git repo.
 
 **Arti Chat - alpha-v0.2.0:**
-- [ ] Windows support.
+- [x] Windows support.
 - [ ] Improved install script.
 - [ ] Improved UI/UX.
 
