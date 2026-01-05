@@ -6,20 +6,20 @@
 
 ### Chat
 
-![chat](screenshots/chat.png)
+![chat](chat.png)
 
 ### Contact details
 
-![contact details](screenshots/contact-details.png)
+![contact details](contact-details.png)
 
 ### My info
 
-![my info](screenshots/my-info.png)
+![my info](my-info.png)
 
 ### Add new contact
 
-![new contact](screenshots/new-contact.png)
+![new contact](new-contact.png)
 
 ### Settings
 
-![settings](screenshots/settings.png)
+![settings](settings.png)
