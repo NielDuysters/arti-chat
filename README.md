@@ -59,7 +59,7 @@ curl -fsSL https://raw.githubusercontent.com/NielDuysters/arti-chat/0bedcbf769b0
 
 ### Installation Microsoft Windows
 
-The instructions for installation on Microsoft Windows can be found [here](microsoft-windows-install.md).
+The instructions for Microsoft Windows can be found [here](microsoft-windows-install.md).
 
 ## Roadmap
 
