@@ -2,7 +2,7 @@
 
 ### Welcome screen
 
-![welcome screen](screenshots/welcome-screen.png)
+![welcome screen](welcome-screen.png)
 
 ### Chat
 
