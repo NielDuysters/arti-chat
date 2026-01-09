@@ -8,6 +8,10 @@
 
 ![chat](chat.png)
 
+### Chat attachments
+
+![chat attachments](chat-attachments.png)
+
 ### Contact details
 
 ![contact details](contact-details.png)
