@@ -11,6 +11,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::Zeroize;
 
 use crate::error::RatchetError;
+use crate::message::MessageContent;
 
 /// Send and receive chain.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -205,6 +206,17 @@ pub struct EncryptedMessage {
     pub nonce: [u8; 12],
     /// Message data / payload.
     pub data: Vec<u8>,
+}
+    
+/// Unencrypted message.
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct PlaintextPayload {
+    /// Sender or receiver.
+    pub onion_id: String,
+    /// Timestamp from sending or receiving.
+    pub timestamp: i64,
+    /// Content of the message (can be of different types).
+    pub message: MessageContent,
 }
 
 // --- Helpers ---

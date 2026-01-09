@@ -105,6 +105,14 @@ pub enum RpcCommand {
 
     /// Ping the daemon to check availability.
     PingDaemon,
+
+    /// Send attachment.
+    SendAttachment {
+        /// Onion ID of the attachment recipient.
+        to: String,
+        /// File path.
+        path: String,
+    }
 }
 
 /// LoadContacts response.
@@ -262,6 +270,8 @@ impl RpcCommand {
             }
             RpcCommand::PingHiddenService => self.handle_ping_hidden_service(client, tx_rpc).await,
             RpcCommand::PingDaemon => self.handle_ping_daemon(tx_rpc).await,
+            RpcCommand::SendAttachment { to, path } =>
+                self.handle_send_attachment(to, path, tx_broadcast, client).await
         }
     }
 
@@ -522,6 +532,17 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
     ) -> Result<(), RpcError> {
         SuccessResponse { success: true }.send_rpc_reply(tx)
+    }
+    
+    /// Handler to send attachment.
+    async fn handle_send_attachment(
+        &self,
+        to: &str,
+        path: &str,
+        tx: &Option<tokio::sync::mpsc::UnboundedSender<MessageToUI>>,
+        client: &client::Client,
+    ) -> Result<(), RpcError> {
+        Ok(())
     }
 }
 

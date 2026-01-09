@@ -7,6 +7,7 @@ use crate::{
     ipc::{self, MessageToUI},
     ui_focus, PROJECT_DIR,
     ratchet,
+    message,
 };
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SigningKey, VerifyingKey};
@@ -189,17 +190,10 @@ impl Client {
 
         self.ensure_ratchet_exists(to_onion_id).await?;
 
-        #[derive(serde::Serialize)]
-        struct PlaintextPayload {
-            onion_id: String,
-            text: String,
-            timestamp: i64,
-        }
-
-        let payload = PlaintextPayload {
+        let payload = ratchet::PlaintextPayload {
             onion_id: self_onion_id.clone(),
-            text: text.to_string(),
             timestamp: chrono::Utc::now().timestamp(),
+            message: message::MessageContent::Text { text: text.to_string() },
         };
 
         let plaintext = serde_json::to_vec(&payload)?;
@@ -462,18 +456,11 @@ impl Client {
                     ratchet.decrypt(&encrypted)?
                 };
 
-                #[derive(serde::Deserialize, serde::Serialize)]
-                struct PlaintextPayload {
-                    onion_id: String,
-                    text: String,
-                    timestamp: i64,
-                }
-
-                let payload: PlaintextPayload = serde_json::from_slice(&plaintext)?;
+                let payload: ratchet::PlaintextPayload = serde_json::from_slice(&plaintext)?;
                 db::MessageDb {
                     id: 0,
                     contact_onion_id: payload.onion_id.clone(),
-                    body: payload.text.clone(),
+                    body: serde_json::to_string(&payload.message)?,
                     timestamp: payload.timestamp as i32,
                     is_incoming: true,
                     sent_status: false,
