@@ -10,11 +10,15 @@ export default function Settings({contacts, setContacts})  {
     const { deleteAllContacts } = useContacts({contacts: contacts, setContacts: setContacts});
     const [deleteAllContactsSuccess, setDeleteAllContactsSuccess] = useState<boolean | null>(null);
     const [enableNotifications, setEnableNotifications] = useState<boolean>(false);
+    const [enableAttachments, setEnableAttachments] = useState<boolean>(false);
 
     useEffect(() => {
         const loadConfig = async () => {
             const enableNotificationsValue = await getConfigValue("enable_notifications");
             setEnableNotifications(enableNotificationsValue === "true")
+            
+            const enableAttachmentsValue = await getConfigValue("enable_attachments");
+            setEnableAttachments(enableAttachmentsValue === "true")
         };
 
         loadConfig();
@@ -43,6 +47,17 @@ export default function Settings({contacts, setContacts})  {
                 onClick={async (checked: boolean) => {
                     setEnableNotifications(checked);
                     await setConfigValue("enable_notifications", checked.toString());
+                }}
+            />
+            
+            <Action
+                label="Enable attachments"
+                description="Send and receive attachments in chat."
+                actionType={ActionType.Toggle}
+                checked={enableAttachments}
+                onClick={async (checked: boolean) => {
+                    setEnableAttachments(checked);
+                    await setConfigValue("enable_attachments", checked.toString());
                 }}
             />
         </div>
