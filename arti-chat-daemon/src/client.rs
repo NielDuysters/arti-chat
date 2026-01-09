@@ -2,7 +2,7 @@
 //! services like the database, onion service,...
 
 use crate::{
-    attachment, db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI}, message::{self, MessageContent}, ratchet, ui_focus, PROJECT_DIR
+    attachment, db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI}, message::MessageContent, ratchet, ui_focus, PROJECT_DIR
 };
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SigningKey, VerifyingKey};
