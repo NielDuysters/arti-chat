@@ -167,6 +167,16 @@ pub struct PingDaemon {}
 impl SendRpcCommand for PingDaemon {}
 impl ReceiveRpcReply<SuccessResponse> for PingDaemon {}
 
+/// --- Send attachment ---
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SendAttachment {
+    pub to: String,
+    pub path: String,
+}
+
+impl SendRpcCommand for SendAttachment {}
+impl ReceiveRpcReply<SuccessResponse> for SendAttachment {}
+
 /// Trait to send types as RPC command.
 #[async_trait]
 pub trait SendRpcCommand: Sized + serde::Serialize {

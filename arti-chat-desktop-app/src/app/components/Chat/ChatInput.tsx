@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { open } from '@tauri-apps/plugin-dialog';
 import "./ChatInput.scss";
 
 export default function ChatInput({ sendMessage }) {
@@ -32,9 +33,29 @@ export default function ChatInput({ sendMessage }) {
         }
     }
 
+    const handleAttachment = async () => {
+        const attachment = await open({
+            multiple: false,
+            directory: false,
+            filters: [
+                {
+                    name: "Image Files",
+                    extensions: ["jpg", "jpeg", "png"],
+                }
+            ]
+        });
+        console.log(attachment);
+    }
+
     return (
         <div className="chat-input">
             <div className="chat-input__inner">
+                <img
+                    src="/assets/attachment.png"
+                    alt="Add attachment"
+                    className="chat-input__attachment-btn"
+                    onClick={handleAttachment}
+                />
                 <textarea
                     ref={textInputRef}
                     className="chat-input__text"

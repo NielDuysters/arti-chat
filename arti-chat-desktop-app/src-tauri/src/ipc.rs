@@ -1,9 +1,10 @@
 //! Logic to make the desktop UI communicate with the daemon using Inter-process communication.
 
- use interprocess::local_socket::{
-            tokio::{prelude::*, Stream},
-            GenericFilePath, GenericNamespaced};
 use crate::error;
+use interprocess::local_socket::{
+    tokio::{prelude::*, Stream},
+    GenericFilePath, GenericNamespaced,
+};
 
 /// Names for sockets.
 #[non_exhaustive]
@@ -12,17 +13,25 @@ pub struct SocketNames;
 impl SocketNames {
     pub fn rpc() -> interprocess::local_socket::Name<'static> {
         if GenericNamespaced::is_supported() {
-            "arti-chat.rpc.sock".to_ns_name::<GenericNamespaced>().expect("Failed to convert to filesystem path-type local socket name.")
+            "arti-chat.rpc.sock"
+                .to_ns_name::<GenericNamespaced>()
+                .expect("Failed to convert to filesystem path-type local socket name.")
         } else {
-            "/tmp/arti-chat.rpc.sock".to_fs_name::<GenericFilePath>().expect("Failed to convert to namespaced local socket name.")
+            "/tmp/arti-chat.rpc.sock"
+                .to_fs_name::<GenericFilePath>()
+                .expect("Failed to convert to namespaced local socket name.")
         }
     }
 
     pub fn broadcast() -> interprocess::local_socket::Name<'static> {
         if GenericNamespaced::is_supported() {
-            "arti-chat.broadcast.sock".to_ns_name::<GenericNamespaced>().expect("Failed to convert to filesystem path-type local socket name.")
+            "arti-chat.broadcast.sock"
+                .to_ns_name::<GenericNamespaced>()
+                .expect("Failed to convert to filesystem path-type local socket name.")
         } else {
-            "/tmp/arti-chat.broadcast.sock".to_fs_name::<GenericFilePath>().expect("Failed to convert to namespaced local socket name.")
+            "/tmp/arti-chat.broadcast.sock"
+                .to_fs_name::<GenericFilePath>()
+                .expect("Failed to convert to namespaced local socket name.")
         }
     }
 }

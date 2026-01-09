@@ -191,3 +191,12 @@ pub async fn restart_daemon() -> Result<(), String> {
 
     Ok(())
 }
+
+#[tauri::command]
+pub async fn send_attachment(to: String, path: String) -> Result<(), String> {
+    rpc::SendAttachment { to, path }
+        .send()
+        .await
+        .map_err(|e| format!("send_attachment failed: {e}"))?;
+    Ok(())
+}
