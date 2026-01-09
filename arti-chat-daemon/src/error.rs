@@ -225,12 +225,12 @@ pub enum AttachmentError {
     ImageError(#[from] ImageError),
     
     /// Image dimensions too big.
-    #[error("Image dimensions exceed limit.")]
-    ImageDimensionsExceedsLimit,
+    #[error("Image dimensions exceed limit of {0}.")]
+    ImageDimensionsExceedsLimit(String),
     
     /// File size exceeds limit.
-    #[error("File size exceeds limit.")]
-    FileSizeExceedsLimit,
+    #[error("File size exceeds limit of {0}.")]
+    FileSizeExceedsLimit(String),
     
     /// Unsupported format.
     #[error("Unsupported format")]

@@ -27,7 +27,7 @@ pub fn reencode_image_to_bytes<P: AsRef<std::path::Path>>(
 
     // Check max file size.
     if bytes.len() > MAX_FILE_SIZE {
-        return Err(AttachmentError::FileSizeExceedsLimit);
+        return Err(AttachmentError::FileSizeExceedsLimit(MAX_FILE_SIZE.to_string()));
     }
 
     // Decode.
@@ -42,7 +42,7 @@ pub fn reencode_bytes(
 ) -> Result<Vec<u8>, AttachmentError> {
     // Check file size.
     if input.len() > MAX_FILE_SIZE {
-        return Err(AttachmentError::FileSizeExceedsLimit);
+        return Err(AttachmentError::FileSizeExceedsLimit(MAX_FILE_SIZE.to_string()));
     }
     
     // Incoming bytes should always be JPEG.
@@ -63,7 +63,7 @@ fn reencode_image(
     // Check max width and height.
     let (x, y) = image.dimensions();
     if x > 1025 || y > 1025 {
-        return Err(AttachmentError::ImageDimensionsExceedsLimit);
+        return Err(AttachmentError::ImageDimensionsExceedsLimit("1025 x 1025px".to_string()));
     }
 
     // Copy to clean buffer.
