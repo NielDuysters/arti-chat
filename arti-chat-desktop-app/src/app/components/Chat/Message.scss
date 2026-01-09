@@ -80,6 +80,11 @@
       width: 25px;
     }
   }
+
+  &__attachment {
+    &--image {
+      width: 100%;
+      max-width: 500px;
+    }
+  }
 }
-
-

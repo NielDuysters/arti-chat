@@ -38,12 +38,18 @@ export function useChat({activeContact, loadContacts}) {
         }
 
         // Push to chat to avoid slow UI.
+        const message = {
+            type: "Text",
+            content: {
+                text: text
+            }
+        };
         const latestPreviousMessage = messages.at(-1);
         setMessages((prev) => [
             ...prev,
             {
                 id: latestPreviousMessage ? latestPreviousMessage.id + 1 : 1,
-                body: text,
+                body: JSON.stringify(message),
                 timestamp: Date.now(),
                 is_incoming: false,
                 sent_status: false,
@@ -56,6 +62,46 @@ export function useChat({activeContact, loadContacts}) {
             to: activeContact.onion_id,
             text: text,
         })
+
+        await loadChat();
+    }
+    
+    // Send attachment.
+    const sendAttachment = async (path: string) => {
+        if (!activeContact) {
+            return;
+        }
+        
+        // Push to chat to avoid slow UI.
+        const message = {
+            type: "Text",
+            content: {
+                text: "Sending image " + path.split("/").pop() + "..."
+            }
+        };
+        const latestPreviousMessage = messages.at(-1);
+        setMessages((prev) => [
+            ...prev,
+            {
+                id: latestPreviousMessage ? latestPreviousMessage.id + 1 : 1,
+                body: JSON.stringify(message),
+                timestamp: Date.now(),
+                is_incoming: false,
+                sent_status: false,
+                verified_status: true,
+                optimistic: true,
+            }
+        ])
+
+        let response = await invoke("send_attachment", {
+            to: activeContact.onion_id,
+            path: path,
+        })
+
+        if (!response.success) {
+            console.log("Error", response.error);
+        }
+
 
         await loadChat();
     }
@@ -76,6 +122,7 @@ export function useChat({activeContact, loadContacts}) {
     return {
         messages,
         sendMessage,
+        sendAttachment,
     };
 }
 

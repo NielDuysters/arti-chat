@@ -33,7 +33,7 @@ const App = () => {
     
     const { daemonIsReachable, setDaemonIsReachable } = useDaemonPing();
     const { hsIsReachable } = useHiddenServicePing();
-    const {messages, sendMessage } = useChat({activeContact: activeContact, loadContacts: loadContacts});
+    const {messages, sendMessage, sendAttachment } = useChat({activeContact: activeContact, loadContacts: loadContacts});
 
     // Load contacts once on mount.
     useEffect(() => {
@@ -65,6 +65,7 @@ const App = () => {
                             loadContacts={loadContacts}
                             messages={messages}
                             sendMessage={sendMessage}
+                            sendAttachment={sendAttachment}
                             setView={setView}
                         />
             case "add-contact":
@@ -99,7 +100,6 @@ const App = () => {
                         />
         }
     }
-
 
     return (
         <main className="container">

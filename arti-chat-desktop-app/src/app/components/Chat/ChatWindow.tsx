@@ -10,7 +10,7 @@ import ChatInput from "./ChatInput";
 
 import "./ChatWindow.scss";
 
-export default function ChatWindow({ activeContact, loadContacts, setView, messages, sendMessage }) {
+export default function ChatWindow({ activeContact, loadContacts, setView, messages, sendMessage, sendAttachment }) {
     const chatRef = useRef<HTMLDivElement>(null);
     const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);
     const [dayLabel, setDayLabel] = useState("today");
@@ -186,8 +186,7 @@ export default function ChatWindow({ activeContact, loadContacts, setView, messa
                 })()}
             </div>
 
-            <ChatInput sendMessage={sendMessage} />
+            <ChatInput sendMessage={sendMessage} sendAttachment={sendAttachment} />
         </div>
     );
 }
-

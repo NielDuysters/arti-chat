@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { open } from '@tauri-apps/plugin-dialog';
 import "./ChatInput.scss";
 
-export default function ChatInput({ sendMessage }) {
+export default function ChatInput({ sendMessage, sendAttachment }) {
     const [text, setText] = useState("");
     const textInputRef = useRef(null);
 
@@ -45,6 +45,8 @@ export default function ChatInput({ sendMessage }) {
             ]
         });
         console.log(attachment);
+
+        await sendAttachment(attachment);
     }
 
     return (
@@ -75,4 +77,3 @@ export default function ChatInput({ sendMessage }) {
         </div>
     );
 }
-
