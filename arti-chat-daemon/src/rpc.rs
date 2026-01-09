@@ -1,11 +1,7 @@
 //! Remote Procedure Call commands.
 
 use crate::{
-    client::{self, ClientConfigKey},
-    db::{self, DbModel, DbUpdateModel},
-    error::{self, RpcError},
-    ipc::MessageToUI,
-    ui_focus,
+    attachment, client::{self, ClientConfigKey}, db::{self, DbModel, DbUpdateModel}, error::{self, RpcError}, ipc::MessageToUI, message::MessageContent, ui_focus
 };
 use async_trait::async_trait;
 
@@ -160,6 +156,17 @@ pub struct GetConfigValueResponse {
 }
 impl SendRpcReply for GetConfigValueResponse {}
 
+/// Send attachment response.
+#[non_exhaustive]
+#[derive(serde::Serialize)]
+pub struct SendAttachmentResponse {
+    /// Success status.
+    pub success: bool,
+    /// Error message.
+    pub error: String,
+}
+impl SendRpcReply for SendAttachmentResponse {}
+
 /// Trait to define default behavior to send RPC reply.
 #[async_trait]
 pub trait SendRpcReply: serde::Serialize {
@@ -271,7 +278,7 @@ impl RpcCommand {
             RpcCommand::PingHiddenService => self.handle_ping_hidden_service(client, tx_rpc).await,
             RpcCommand::PingDaemon => self.handle_ping_daemon(tx_rpc).await,
             RpcCommand::SendAttachment { to, path } =>
-                self.handle_send_attachment(to, path, tx_broadcast, client).await
+                self.handle_send_attachment(to, path, tx_rpc, tx_broadcast, client).await
         }
     }
 
@@ -322,10 +329,11 @@ impl RpcCommand {
         client: &client::Client,
     ) -> Result<(), RpcError> {
         // Insert message into db.
+        let message = MessageContent::Text { text: text.to_string() };
         let message_id = db::MessageDb {
             id: 0,
             contact_onion_id: to.to_string(),
-            body: text.to_string(),
+            body: serde_json::to_string(&message)?,
             timestamp: chrono::Utc::now().timestamp() as i32,
             is_incoming: false,
             sent_status: false,
@@ -335,7 +343,7 @@ impl RpcCommand {
         .await?;
 
         // Send message to peer.
-        if client.send_message_to_peer(to, text).await.is_ok() {
+        if client.send_message_to_peer(to, crate::message::MessageContent::Text { text: text.to_string() }).await.is_ok() {
             // Update sent status.
             db::UpdateMessageDb {
                 id: message_id.expect_i64()?,
@@ -539,9 +547,77 @@ impl RpcCommand {
         &self,
         to: &str,
         path: &str,
-        tx: &Option<tokio::sync::mpsc::UnboundedSender<MessageToUI>>,
+        tx_rpc: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
+        tx_broadcast: &Option<tokio::sync::mpsc::UnboundedSender<MessageToUI>>,
         client: &client::Client,
     ) -> Result<(), RpcError> {
+        let image_bytes = match attachment::reencode_image_to_bytes(path) {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                let _ = SendAttachmentResponse {
+                    success: false,
+                    error: e.to_string(),
+                }.send_rpc_reply(tx_rpc);
+                
+                // Insert error message.
+                let error_message = MessageContent::Error { message: e.to_string() };
+                let _ = db::MessageDb {
+                    id: 0,
+                    contact_onion_id: to.to_string(),
+                    body: serde_json::to_string(&error_message)?,
+                    timestamp: chrono::Utc::now().timestamp() as i32,
+                    is_incoming: false,
+                    sent_status: true,
+                    verified_status: true,
+                }
+                .insert(client.db_conn.clone())
+                .await?;
+
+                return Err(error::RpcError::AttachmentError(
+                    e
+                ));
+            }
+        };
+        let message = MessageContent::Image { data: image_bytes };
+
+        // Insert message into db.
+        let message_id = db::MessageDb {
+            id: 0,
+            contact_onion_id: to.to_string(),
+            body: serde_json::to_string(&message)?,
+            timestamp: chrono::Utc::now().timestamp() as i32,
+            is_incoming: false,
+            sent_status: false,
+            verified_status: false,
+        }
+        .insert(client.db_conn.clone())
+        .await?;
+
+        // Send message to peer.
+        if client.send_message_to_peer(to, message).await.is_ok() {
+            // Update sent status.
+            db::UpdateMessageDb {
+                id: message_id.expect_i64()?,
+                sent_status: Some(true),
+            }
+            .update(client.db_conn.clone())
+            .await?;
+        }
+
+        // By sending a incoming message to the UI over broadcast, the UI will reload the chat.
+        #[derive(serde::Serialize)]
+        struct SendIncomingMessage {
+            /// HsId from peer we received this message from.
+            pub onion_id: String,
+        }
+        let incoming_message = SendIncomingMessage {
+            onion_id: to.to_string(),
+        };
+        let incoming_message = serde_json::to_string(&incoming_message)? + "\n";
+        if let Some(tx_broadcast) = tx_broadcast {
+            let _ = tx_broadcast.send(MessageToUI::Broadcast(incoming_message));
+        }
+
         Ok(())
     }
 }
