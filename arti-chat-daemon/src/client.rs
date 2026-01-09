@@ -2,12 +2,7 @@
 //! services like the database, onion service,...
 
 use crate::{
-    db::{self, DbModel, DbUpdateModel},
-    error,
-    ipc::{self, MessageToUI},
-    ui_focus, PROJECT_DIR,
-    ratchet,
-    message,
+    attachment, db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI}, message::{self, MessageContent}, ratchet, ui_focus, PROJECT_DIR
 };
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SigningKey, VerifyingKey};
@@ -184,7 +179,7 @@ impl Client {
     pub async fn send_message_to_peer(
         &self,
         to_onion_id: &str,
-        text: &str,
+        message: MessageContent,
     ) -> Result<(), error::ClientError> {
         let self_onion_id = self.get_identity_unredacted()?;
 
@@ -193,7 +188,7 @@ impl Client {
         let payload = ratchet::PlaintextPayload {
             onion_id: self_onion_id.clone(),
             timestamp: chrono::Utc::now().timestamp(),
-            message: message::MessageContent::Text { text: text.to_string() },
+            message,
         };
 
         let plaintext = serde_json::to_vec(&payload)?;
@@ -229,8 +224,9 @@ impl Client {
                 tracing::info!("Retrying message {}", msg.id);
 
                 // Retry sending.
+                let message : MessageContent = serde_json::from_str(&msg.body)?;
                 let retry = self
-                    .send_message_to_peer(&msg.contact_onion_id, &msg.body)
+                    .send_message_to_peer(&msg.contact_onion_id, message)
                     .await;
 
                 if retry.is_ok() {
@@ -457,10 +453,18 @@ impl Client {
                 };
 
                 let payload: ratchet::PlaintextPayload = serde_json::from_slice(&plaintext)?;
+                let message = match payload.message.clone() {
+                    // Reencode bytes for image and do size checks.
+                    MessageContent::Image { data } => {
+                        MessageContent::Image { data: attachment::reencode_bytes(data)? }
+                    },
+                    other => other,
+                };
+
                 db::MessageDb {
                     id: 0,
                     contact_onion_id: payload.onion_id.clone(),
-                    body: serde_json::to_string(&payload.message)?,
+                    body: serde_json::to_string(&message)?,
                     timestamp: payload.timestamp as i32,
                     is_incoming: true,
                     sent_status: false,
@@ -530,5 +534,4 @@ impl Client {
 
         Ok(())
     } 
-
 }
