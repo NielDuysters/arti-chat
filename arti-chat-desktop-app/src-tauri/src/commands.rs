@@ -1,6 +1,7 @@
 use crate::model;
 use crate::rpc;
 use crate::rpc::ReceiveRpcReply;
+use crate::rpc::SendAttachmentResponse;
 use crate::rpc::SendRpcCommand;
 
 #[tauri::command]
@@ -193,10 +194,9 @@ pub async fn restart_daemon() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn send_attachment(to: String, path: String) -> Result<(), String> {
+pub async fn send_attachment(to: String, path: String) -> Result<SendAttachmentResponse, String> {
     rpc::SendAttachment { to, path }
-        .send()
+        .receive()
         .await
-        .map_err(|e| format!("send_attachment failed: {e}"))?;
-    Ok(())
+        .map_err(|e| format!("send_attachment failed: {e}"))
 }

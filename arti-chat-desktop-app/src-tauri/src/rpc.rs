@@ -174,8 +174,14 @@ pub struct SendAttachment {
     pub path: String,
 }
 
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct SendAttachmentResponse {
+    pub success: bool,
+    pub error: String,
+}
+
 impl SendRpcCommand for SendAttachment {}
-impl ReceiveRpcReply<SuccessResponse> for SendAttachment {}
+impl ReceiveRpcReply<SendAttachmentResponse> for SendAttachment {}
 
 /// Trait to send types as RPC command.
 #[async_trait]

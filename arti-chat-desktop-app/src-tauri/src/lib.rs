@@ -89,6 +89,7 @@ pub fn run() {
             commands::ping_hidden_service,
             commands::ping_daemon,
             commands::restart_daemon,
+            commands::send_attachment,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
