@@ -12,7 +12,7 @@
    <p align="center">
 		✅ Free and open-source									<br>
     ✅ Fully decentralized and peer-to-peer	<br>
-    ✅ Reasonably anonymous (Tor)											<br>
+    ✅ Reasonable anonymity (Tor)											<br>
     ✅ Network encryption (Tor)											<br>
     ✅ End-to-end encryption (ChaCha20-Poly1305 AEAD)					<br>
     ✅ Data stored locally and encrypted		<br>
