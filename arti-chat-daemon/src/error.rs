@@ -1,5 +1,6 @@
 //! Used error types.
 
+use image::ImageError;
 use thiserror::Error;
 
 use crate::ipc::MessageToUI;
@@ -92,6 +93,10 @@ pub enum ClientError {
     /// Ratchet Error.
     #[error("Ratchet error: {0}")]
     RatchetError(#[from] RatchetError),
+    
+    /// Attachment Error.
+    #[error("Attachment error: {0}")]
+    AttachmentError(#[from] AttachmentError),
 }
 
 /// Errors related to database.
@@ -151,6 +156,10 @@ pub enum RpcError {
     /// Error in client.
     #[error("Arti Chat Client error: {0}")]
     ClientError(#[from] ClientError),
+    
+    /// Attachment Error.
+    #[error("Attachment error: {0}")]
+    AttachmentError(#[from] AttachmentError),
 }
 
 /// Errors related to message.
@@ -201,6 +210,31 @@ pub enum RatchetError {
     /// Hex decode error.
     #[error("Hex decode error: {0}")]
     HexDecodeError(#[from] hex::FromHexError),
+    
+    /// I/O Error.
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+}
+
+/// Errors related to attachments.
+#[non_exhaustive]
+#[derive(Error, Debug)]
+pub enum AttachmentError {
+    /// Image error.
+    #[error("Image error: {0}")]
+    ImageError(#[from] ImageError),
+    
+    /// Image dimensions too big.
+    #[error("Image dimensions exceed limit.")]
+    ImageDimensionsExceedsLimit,
+    
+    /// File size exceeds limit.
+    #[error("File size exceeds limit.")]
+    FileSizeExceedsLimit,
+    
+    /// Unsupported format.
+    #[error("Unsupported format")]
+    FileUnsupportedFormat,
     
     /// I/O Error.
     #[error("I/O error: {0}")]

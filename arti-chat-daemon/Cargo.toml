@@ -18,6 +18,7 @@ ed25519-dalek = { version = "2.2.0", features = ["serde", "rand_core"] }
 futures = "0.3.31"
 hex = "0.4.3"
 hkdf = "0.12.4"
+image = "0.25.9"
 interprocess = { version = "2.2.3", features = ["tokio"] }
 keyring = { version = "3.6.3", features = ["apple-native", "linux-native", "windows-native"] }
 notify-rust = "4.11.7"

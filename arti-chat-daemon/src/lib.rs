@@ -44,6 +44,7 @@
 
 use tokio::sync::Mutex as TokioMutex;
 
+pub mod attachment;
 pub mod client;
 pub mod db;
 pub mod error;
