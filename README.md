@@ -75,7 +75,7 @@ The instructions for Microsoft Windows can be found [here](microsoft-windows-ins
 - [ ] Get feedback on code + architecture.
 - [ ] Discuss different possible approaches.
 - [ ] Solve bugs and instability issues.
-- [ ] Option to send images.
+- [x] Option to send images.
 - [ ] Group chat?
 
 **Arti Chat - alpha-v0.1.0:**
