@@ -239,4 +239,8 @@ pub enum AttachmentError {
     /// I/O Error.
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
+    
+    /// Attachments disabled in settings.
+    #[error("Sending and receiving attachments is disabled in settings.")]
+    DisabledInSettings,
 }

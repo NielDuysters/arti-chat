@@ -504,11 +504,13 @@ impl RpcCommand {
         client: &client::Client,
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
     ) -> Result<(), RpcError> {
+        println!("CONFIG FOR {key}");
         let key = key
             .parse::<ClientConfigKey>()
             .map_err(|_| error::ClientError::InvalidConfigKey)?;
         let cfg = client.config.lock().await;
         let value = cfg.get(&key);
+        println!("CONFIG VAL {value}");
         GetConfigValueResponse { value }.send_rpc_reply(tx)
     }
 
@@ -551,6 +553,30 @@ impl RpcCommand {
         tx_broadcast: &Option<tokio::sync::mpsc::UnboundedSender<MessageToUI>>,
         client: &client::Client,
     ) -> Result<(), RpcError> {
+        let client_config = client.config.lock().await;
+        if !client_config.enable_attachments {
+            let _ = SendAttachmentResponse {
+                success: false,
+                error: "Sending attachments is disabled in settings.".to_string(),
+            }.send_rpc_reply(tx_rpc);
+            
+            // Insert error message.
+            let error_message = MessageContent::Error { message: "Sending attachments is disabled in settings.".to_string() };
+            let _ = db::MessageDb {
+                id: 0,
+                contact_onion_id: to.to_string(),
+                body: serde_json::to_string(&error_message)?,
+                timestamp: chrono::Utc::now().timestamp() as i32,
+                is_incoming: false,
+                sent_status: true,
+                verified_status: true,
+            }
+            .insert(client.db_conn.clone())
+            .await?;
+
+            return Err(error::RpcError::AttachmentError(error::AttachmentError::DisabledInSettings));
+        }
+
         let image_bytes = match attachment::reencode_image_to_bytes(path) {
             Ok(bytes) => bytes,
             Err(e) => {

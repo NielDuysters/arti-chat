@@ -67,7 +67,8 @@ pub async fn init_database(
         INSERT INTO
             config (key, value)
         VALUES
-            ('enable_notifications', 'true')
+            ('enable_notifications', 'true'),
+            ('enable_attachments', 'true')
         ON CONFLICT(key) DO NOTHING;
 
         CREATE TABLE IF NOT EXISTS contact (

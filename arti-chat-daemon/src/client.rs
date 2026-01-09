@@ -52,6 +52,8 @@ pub struct Client {
 pub struct ClientConfig {
     /// Enable/disable notifications.
     pub enable_notifications: bool,
+    /// Allow sending and receiving attachments.
+    pub enable_attachments: bool,
 }
 
 impl ClientConfig {
@@ -60,6 +62,8 @@ impl ClientConfig {
         Ok(Self {
             enable_notifications: db::ConfigDb::get_bool("enable_notifications", db_conn.clone())
                 .await?,
+            enable_attachments: db::ConfigDb::get_bool("enable_attachments", db_conn.clone())
+                .await?,
         })
     }
 
@@ -67,6 +71,7 @@ impl ClientConfig {
     pub fn get(&self, key: &ClientConfigKey) -> String {
         match key {
             ClientConfigKey::EnableNotifications => self.enable_notifications.to_string(),
+            ClientConfigKey::EnableAttachments => self.enable_attachments.to_string(),
         }
     }
 }
@@ -76,6 +81,8 @@ impl ClientConfig {
 pub enum ClientConfigKey {
     /// Setting for desktop notifications for incoming messages.
     EnableNotifications,
+    /// Setting for allowing attachments in chat.
+    EnableAttachments,
 }
 
 impl std::str::FromStr for ClientConfigKey {
@@ -84,6 +91,7 @@ impl std::str::FromStr for ClientConfigKey {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "enable_notifications" => Ok(Self::EnableNotifications),
+            "enable_attachments" => Ok(Self::EnableAttachments),
             _ => Err(()),
         }
     }
@@ -184,7 +192,6 @@ impl Client {
         let self_onion_id = self.get_identity_unredacted()?;
 
         self.ensure_ratchet_exists(to_onion_id).await?;
-
         let payload = ratchet::PlaintextPayload {
             onion_id: self_onion_id.clone(),
             timestamp: chrono::Utc::now().timestamp(),
@@ -192,7 +199,6 @@ impl Client {
         };
 
         let plaintext = serde_json::to_vec(&payload)?;
-
         let encrypted = {
             let mut ratchets = self.ratchets.lock().await;
             let ratchet = ratchets
@@ -452,11 +458,17 @@ impl Client {
                     ratchet.decrypt(&encrypted)?
                 };
 
+                let client_config = client_config.lock().await;
+                
                 let payload: ratchet::PlaintextPayload = serde_json::from_slice(&plaintext)?;
                 let message = match payload.message.clone() {
                     // Reencode bytes for image and do size checks.
                     MessageContent::Image { data } => {
-                        MessageContent::Image { data: attachment::reencode_bytes(data)? }
+                        if !client_config.enable_attachments {
+                            MessageContent::Error { message: "Receiving attachments is disabled in settings.".to_string() }
+                        } else {
+                            MessageContent::Image { data: attachment::reencode_bytes(data)? }
+                        }
                     },
                     other => other,
                 };
@@ -477,7 +489,6 @@ impl Client {
                 
                 // Show notifcation for new message if user
                 // is not actively using the app.
-                let client_config = client_config.lock().await;
                 if client_config.enable_notifications && !ui_focus::is_focussed() {
                     let _ = Notification::new()
                         .summary("Arti chat")
