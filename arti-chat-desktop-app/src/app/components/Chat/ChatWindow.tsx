@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, Fragment } from "react";
+import { useEffect, useState, useCallback, useRef, useLayoutEffect, Fragment } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import Jdenticon from "react-jdenticon";
@@ -10,8 +10,9 @@ import ChatInput from "./ChatInput";
 
 import "./ChatWindow.scss";
 
-export default function ChatWindow({ activeContact, loadContacts, setView, messages, sendMessage, sendAttachment }) {
+export default function ChatWindow({ activeContact, loadContacts, setView, messages, sendMessage, sendAttachment, setMessageBatchNumber }) {
     const chatRef = useRef<HTMLDivElement>(null);
+    const prevScrollHeightRef = useRef<number | null>(null);
     const [autoScrollToBottom, setAutoScrollToBottom] = useState(true);
     const [dayLabel, setDayLabel] = useState("today");
     const [dayLabelVisible, setDayLabelVisible] = useState(false);
@@ -43,6 +44,13 @@ export default function ChatWindow({ activeContact, loadContacts, setView, messa
             setDayLabelVisible(true);
         }
         setAutoScrollToBottom(userIsAtBottom);
+
+        // Detect if user is at top of chat.
+        const userIsAtTop = el.scrollTop <= 20;
+        if (userIsAtTop && prevScrollHeightRef.current === null) {
+            prevScrollHeightRef.current = el.scrollHeight;
+            setMessageBatchNumber(Math.floor(messages.length / 25) + 1);
+        }
     };
 
     // Clean up hideDayLabelTimeout on unmount.
@@ -67,6 +75,19 @@ export default function ChatWindow({ activeContact, loadContacts, setView, messa
         }
 
     }, [messages, autoScrollToBottom]);
+
+    useLayoutEffect(() => {
+        const el = chatRef.current;
+        if (!el) {
+            return;
+        }
+
+        if (prevScrollHeightRef.current !== null) {
+            const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
+            el.scrollTop = heightDiff;
+            prevScrollHeightRef.current = null;
+        }
+    }, [messages]);
 
     // Get date of message.
     const dateOfMessage = (timestamp) => {
@@ -190,3 +211,4 @@ export default function ChatWindow({ activeContact, loadContacts, setView, messa
         </div>
     );
 }
+

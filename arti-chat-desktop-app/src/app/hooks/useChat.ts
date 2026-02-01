@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -11,7 +11,9 @@ export interface Message {
     verified_status: boolean;
 }
 
-export function useChat({activeContact, loadContacts}) {
+const BATCH_SIZE = 25;
+
+export function useChat({activeContact, loadContacts, messageBatchNumber}) {
     const [messages, setMessages] = useState<Message[]>([]);
 
     // Load chat.
@@ -22,15 +24,21 @@ export function useChat({activeContact, loadContacts}) {
 
         const msgs = await invoke<Message[]>("load_chat", {
             onionId: activeContact.onion_id,
+            offset: 0,
+            limit: messageBatchNumber * BATCH_SIZE
         });
 
-        setMessages(msgs);
-    }, [activeContact]);
+        setMessages(msgs.reverse());
+    }, [activeContact, messageBatchNumber]);
 
     useEffect(() => {
         loadChat();
     }, [loadChat]);
 
+    useEffect(() => {
+        loadChat();
+    }, [messageBatchNumber]);
+    
     // Send message.
     const sendMessage = async (text: string) => {
         if (!activeContact) {
@@ -101,7 +109,6 @@ export function useChat({activeContact, loadContacts}) {
         if (!response.success) {
             console.log("Error", response.error);
         }
-
 
         await loadChat();
     }

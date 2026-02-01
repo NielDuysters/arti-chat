@@ -14,8 +14,8 @@ pub async fn load_contacts() -> Result<Vec<model::Contact>, String> {
 }
 
 #[tauri::command]
-pub async fn load_chat(onion_id: String) -> Result<Vec<model::Message>, String> {
-    let response = rpc::LoadChat { onion_id }
+pub async fn load_chat(onion_id: String, offset: Option<usize>, limit: Option<usize>) -> Result<Vec<model::Message>, String> {
+    let response = rpc::LoadChat { onion_id, offset, limit }
         .receive()
         .await
         .map_err(|e| format!("load_chat failed: {e}"))?;

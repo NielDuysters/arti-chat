@@ -21,6 +21,8 @@ impl ReceiveRpcReply<LoadContactsResponse> for LoadContacts {}
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct LoadChat {
     pub onion_id: String,
+    pub offset: Option<usize>,
+    pub limit: Option<usize>,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
