@@ -50,6 +50,11 @@ const App = () => {
             setActiveContact(null);
         }
     }, [view]);
+    
+    // Reset messageBatchNumber when other chat is viewed.
+    useEffect(() => {
+        setMessageBatchNumber(1);
+    }, [activeContact]);
 
     // Show loading screen if daemon is not active yet.
     if (!initialLoadDone) {
