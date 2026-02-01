@@ -91,6 +91,7 @@ The instructions for Microsoft Windows can be found [here](microsoft-windows-ins
 - [x] Windows support.
 - [ ] Improved install script.
 - [ ] Improved UI/UX.
+- [ ] Add CI.
 
 **Arti Chat - beta-v0.3.0:**
 - [ ] Secure and stable enough for actual usage.
