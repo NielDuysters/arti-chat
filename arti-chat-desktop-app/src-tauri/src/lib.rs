@@ -35,14 +35,13 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = ipc::launch_daemon().await {
                     tracing::error!("launch_daemon failed: {e}");
-                    return;
                 }
 
                 loop {
                     let broadcast_stream = match ipc::get_socket_stream(
                         ipc::SocketNames::broadcast(),
                         20,
-                        tokio::time::Duration::from_millis(1000),
+                        tokio::time::Duration::from_millis(5000),
                     )
                     .await
                     {
