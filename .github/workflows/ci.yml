@@ -69,9 +69,7 @@ jobs:
         with:
           node-version: 24
       - name: Install deps
-        run: | 
-          npm install
-          npm install typescript
+        run: npm install
         working-directory: arti-chat-desktop-app
       - name: Run typescript checks
         run: npm run tschecks
