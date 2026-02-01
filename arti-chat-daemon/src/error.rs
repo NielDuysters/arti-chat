@@ -89,11 +89,11 @@ pub enum ClientError {
     /// Invalid config key.
     #[error("Invalid config key.")]
     InvalidConfigKey,
-    
+
     /// Ratchet Error.
     #[error("Ratchet error: {0}")]
     RatchetError(#[from] RatchetError),
-    
+
     /// Attachment Error.
     #[error("Attachment error: {0}")]
     AttachmentError(#[from] AttachmentError),
@@ -156,7 +156,7 @@ pub enum RpcError {
     /// Error in client.
     #[error("Arti Chat Client error: {0}")]
     ClientError(#[from] ClientError),
-    
+
     /// Attachment Error.
     #[error("Attachment error: {0}")]
     AttachmentError(#[from] AttachmentError),
@@ -190,11 +190,11 @@ pub enum RatchetError {
     /// Handshake target does not match self.
     #[error("Invalid handshake target.")]
     InvalidHandshakeTarget,
-    
+
     /// Ed25519 error.
     #[error("ed25519 error: {0}")]
     Ed25519Error(#[from] ed25519_dalek::ed25519::Error),
-    
+
     /// HKDF invalid length.
     #[error("HKDF invalid length.")]
     HkdfInvalidLength,
@@ -202,7 +202,7 @@ pub enum RatchetError {
     /// Error decrypting message.
     #[error("Failed to decrypt message.")]
     MessageDecryptError,
-    
+
     /// Invalid key length.
     #[error("Key length is not 32 bytes.")]
     InvalidKeyLength,
@@ -210,7 +210,7 @@ pub enum RatchetError {
     /// Hex decode error.
     #[error("Hex decode error: {0}")]
     HexDecodeError(#[from] hex::FromHexError),
-    
+
     /// I/O Error.
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
@@ -223,23 +223,23 @@ pub enum AttachmentError {
     /// Image error.
     #[error("Image error: {0}")]
     ImageError(#[from] ImageError),
-    
+
     /// Image dimensions too big.
     #[error("Image dimensions exceed limit of {0}.")]
     ImageDimensionsExceedsLimit(String),
-    
+
     /// File size exceeds limit.
     #[error("File size exceeds limit of {0}.")]
     FileSizeExceedsLimit(String),
-    
+
     /// Unsupported format.
     #[error("Unsupported format")]
     FileUnsupportedFormat,
-    
+
     /// I/O Error.
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
-    
+
     /// Attachments disabled in settings.
     #[error("Sending and receiving attachments is disabled in settings.")]
     DisabledInSettings,

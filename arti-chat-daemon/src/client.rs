@@ -2,7 +2,12 @@
 //! services like the database, onion service,...
 
 use crate::{
-    attachment, db::{self, DbModel, DbUpdateModel}, error, ipc::{self, MessageToUI}, message::MessageContent, ratchet, ui_focus, PROJECT_DIR
+    PROJECT_DIR, attachment,
+    db::{self, DbModel, DbUpdateModel},
+    error,
+    ipc::{self, MessageToUI},
+    message::MessageContent,
+    ratchet, ui_focus,
 };
 use arti_client::config::onion_service::OnionServiceConfigBuilder;
 use ed25519_dalek::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SigningKey, VerifyingKey};
@@ -230,7 +235,7 @@ impl Client {
                 tracing::info!("Retrying message {}", msg.id);
 
                 // Retry sending.
-                let message : MessageContent = serde_json::from_str(&msg.body)?;
+                let message: MessageContent = serde_json::from_str(&msg.body)?;
                 let retry = self
                     .send_message_to_peer(&msg.contact_onion_id, message)
                     .await;
@@ -315,12 +320,9 @@ impl Client {
     async fn bootstrap_tor_client() -> Result<ArtiTorClient, error::ClientError> {
         let state_dir = PROJECT_DIR.data_local_dir().join("hsstate");
         let cache_dir = state_dir.join("cache");
-        let config = arti_client::config::TorClientConfigBuilder::
-            from_directories(
-                state_dir,
-                cache_dir
-            )
-        .build()?;
+        let config =
+            arti_client::config::TorClientConfigBuilder::from_directories(state_dir, cache_dir)
+                .build()?;
         let client = arti_client::TorClient::create_bootstrapped(config).await?;
 
         tracing::info!("Tor Client bootstrapped.");
@@ -409,7 +411,7 @@ impl Client {
         my_onion_id: String,
         private_key: SigningKey,
         ratchets: std::sync::Arc<
-        tokio::sync::Mutex<std::collections::HashMap<String, ratchet::RatchetChain>>,
+            tokio::sync::Mutex<std::collections::HashMap<String, ratchet::RatchetChain>>,
         >,
     ) -> Result<(), error::ClientError> {
         match request.request() {
@@ -429,10 +431,14 @@ impl Client {
                     let peer = db::ContactDb::retrieve(&handshake.from, db_conn.clone()).await?;
                     let peer_public_key = ratchet::verifying_key_from_hex(&peer.public_key)?;
 
-                    let (response_handshake, ephemeral_secret) = handshake.accept(&my_onion_id, &peer_public_key, &private_key)?;
-                    let mut response_handshake_payload = serde_json::to_string(&response_handshake)?;
+                    let (response_handshake, ephemeral_secret) =
+                        handshake.accept(&my_onion_id, &peer_public_key, &private_key)?;
+                    let mut response_handshake_payload =
+                        serde_json::to_string(&response_handshake)?;
                     response_handshake_payload.push('\0');
-                    stream.write_all(response_handshake_payload.as_bytes()).await?;
+                    stream
+                        .write_all(response_handshake_payload.as_bytes())
+                        .await?;
                     stream.flush().await?;
 
                     let ratchet_chain = handshake.complete(
@@ -452,24 +458,29 @@ impl Client {
                 let encrypted: ratchet::EncryptedMessage = serde_json::from_str(&body)?;
                 let plaintext = {
                     let mut ratchets = ratchets.lock().await;
-                    let ratchet = ratchets.get_mut(&encrypted.from).ok_or_else(|| {
-                        error::ClientError::ArtiBug
-                    })?;
+                    let ratchet = ratchets
+                        .get_mut(&encrypted.from)
+                        .ok_or_else(|| error::ClientError::ArtiBug)?;
                     ratchet.decrypt(&encrypted)?
                 };
 
                 let client_config = client_config.lock().await;
-                
+
                 let payload: ratchet::PlaintextPayload = serde_json::from_slice(&plaintext)?;
                 let message = match payload.message.clone() {
                     // Reencode bytes for image and do size checks.
                     MessageContent::Image { data } => {
                         if !client_config.enable_attachments {
-                            MessageContent::Error { message: "Receiving attachments is disabled in settings.".to_string() }
+                            MessageContent::Error {
+                                message: "Receiving attachments is disabled in settings."
+                                    .to_string(),
+                            }
                         } else {
-                            MessageContent::Image { data: attachment::reencode_bytes(data)? }
+                            MessageContent::Image {
+                                data: attachment::reencode_bytes(data)?,
+                            }
                         }
-                    },
+                    }
                     other => other,
                 };
 
@@ -486,7 +497,7 @@ impl Client {
                 .await?;
 
                 let _ = message_tx.send(serde_json::to_string(&payload)?);
-                
+
                 // Show notifcation for new message if user
                 // is not actively using the app.
                 if client_config.enable_notifications && !ui_focus::is_focussed() {
@@ -506,7 +517,6 @@ impl Client {
         }
     }
 
-
     /// Ensure a ratchet for message encryption exists for specific contact.
     async fn ensure_ratchet_exists(&self, peer_onion_id: &str) -> Result<(), error::ClientError> {
         let self_onion_id = self.get_identity_unredacted()?;
@@ -521,11 +531,8 @@ impl Client {
         let peer = db::ContactDb::retrieve(peer_onion_id, self.db_conn.clone()).await?;
         let peer_public_key = ratchet::verifying_key_from_hex(&peer.public_key)?;
 
-        let (initiating_handshake, self_ephemeral_secret) = ratchet::Handshake::initiate(
-            &self_onion_id,
-            peer_onion_id,
-            &self.private_key,
-        );
+        let (initiating_handshake, self_ephemeral_secret) =
+            ratchet::Handshake::initiate(&self_onion_id, peer_onion_id, &self.private_key);
 
         let target = format!("{}:80", peer_onion_id);
         let tor_client = self.tor_client.lock().await;
@@ -538,11 +545,16 @@ impl Client {
 
         let handshake_response_raw = ratchet::read_null_terminated(&mut stream).await?;
         let handshake_response: ratchet::Handshake = serde_json::from_str(&handshake_response_raw)?;
-        let ratchet = handshake_response.complete(&self_onion_id, &peer_public_key, self_ephemeral_secret, true)?; 
+        let ratchet = handshake_response.complete(
+            &self_onion_id,
+            &peer_public_key,
+            self_ephemeral_secret,
+            true,
+        )?;
 
         let mut ratchets = self.ratchets.lock().await;
         ratchets.insert(peer_onion_id.into(), ratchet);
 
         Ok(())
-    } 
+    }
 }

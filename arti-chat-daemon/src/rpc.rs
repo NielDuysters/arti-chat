@@ -1,7 +1,13 @@
 //! Remote Procedure Call commands.
 
 use crate::{
-    attachment, client::{self, ClientConfigKey}, db::{self, DbModel, DbUpdateModel}, error::{self, RpcError}, ipc::MessageToUI, message::MessageContent, ui_focus
+    attachment,
+    client::{self, ClientConfigKey},
+    db::{self, DbModel, DbUpdateModel},
+    error::{self, RpcError},
+    ipc::MessageToUI,
+    message::MessageContent,
+    ui_focus,
 };
 use async_trait::async_trait;
 
@@ -114,7 +120,7 @@ pub enum RpcCommand {
         to: String,
         /// File path.
         path: String,
-    }
+    },
 }
 
 /// LoadContacts response.
@@ -201,7 +207,11 @@ impl RpcCommand {
                 self.handle_load_contacts(tx_rpc, client.db_conn.clone())
                     .await
             }
-            RpcCommand::LoadChat { onion_id, offset, limit } => {
+            RpcCommand::LoadChat {
+                onion_id,
+                offset,
+                limit,
+            } => {
                 self.handle_load_chat(onion_id, offset, limit, tx_rpc, client.db_conn.clone())
                     .await
             }
@@ -283,8 +293,10 @@ impl RpcCommand {
             }
             RpcCommand::PingHiddenService => self.handle_ping_hidden_service(client, tx_rpc).await,
             RpcCommand::PingDaemon => self.handle_ping_daemon(tx_rpc).await,
-            RpcCommand::SendAttachment { to, path } =>
-                self.handle_send_attachment(to, path, tx_rpc, tx_broadcast, client).await
+            RpcCommand::SendAttachment { to, path } => {
+                self.handle_send_attachment(to, path, tx_rpc, tx_broadcast, client)
+                    .await
+            }
         }
     }
 
@@ -317,7 +329,8 @@ impl RpcCommand {
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
-        let messages = db::MessageDb::retrieve_messages(onion_id, offset, limit, db_conn.clone()).await?;
+        let messages =
+            db::MessageDb::retrieve_messages(onion_id, offset, limit, db_conn.clone()).await?;
 
         LoadChatResponse {
             messages: messages
@@ -337,7 +350,9 @@ impl RpcCommand {
         client: &client::Client,
     ) -> Result<(), RpcError> {
         // Insert message into db.
-        let message = MessageContent::Text { text: text.to_string() };
+        let message = MessageContent::Text {
+            text: text.to_string(),
+        };
         let message_id = db::MessageDb {
             id: 0,
             contact_onion_id: to.to_string(),
@@ -351,7 +366,16 @@ impl RpcCommand {
         .await?;
 
         // Send message to peer.
-        if client.send_message_to_peer(to, crate::message::MessageContent::Text { text: text.to_string() }).await.is_ok() {
+        if client
+            .send_message_to_peer(
+                to,
+                crate::message::MessageContent::Text {
+                    text: text.to_string(),
+                },
+            )
+            .await
+            .is_ok()
+        {
             // Update sent status.
             db::UpdateMessageDb {
                 id: message_id.expect_i64()?,
@@ -549,7 +573,7 @@ impl RpcCommand {
     ) -> Result<(), RpcError> {
         SuccessResponse { success: true }.send_rpc_reply(tx)
     }
-    
+
     /// Handler to send attachment.
     async fn handle_send_attachment(
         &self,
@@ -564,10 +588,13 @@ impl RpcCommand {
             let _ = SendAttachmentResponse {
                 success: false,
                 error: "Sending attachments is disabled in settings.".to_string(),
-            }.send_rpc_reply(tx_rpc);
-            
+            }
+            .send_rpc_reply(tx_rpc);
+
             // Insert error message.
-            let error_message = MessageContent::Error { message: "Sending attachments is disabled in settings.".to_string() };
+            let error_message = MessageContent::Error {
+                message: "Sending attachments is disabled in settings.".to_string(),
+            };
             let _ = db::MessageDb {
                 id: 0,
                 contact_onion_id: to.to_string(),
@@ -580,7 +607,9 @@ impl RpcCommand {
             .insert(client.db_conn.clone())
             .await?;
 
-            return Err(error::RpcError::AttachmentError(error::AttachmentError::DisabledInSettings));
+            return Err(error::RpcError::AttachmentError(
+                error::AttachmentError::DisabledInSettings,
+            ));
         }
 
         let image_bytes = match attachment::reencode_image_to_bytes(path) {
@@ -589,10 +618,13 @@ impl RpcCommand {
                 let _ = SendAttachmentResponse {
                     success: false,
                     error: e.to_string(),
-                }.send_rpc_reply(tx_rpc);
-                
+                }
+                .send_rpc_reply(tx_rpc);
+
                 // Insert error message.
-                let error_message = MessageContent::Error { message: e.to_string() };
+                let error_message = MessageContent::Error {
+                    message: e.to_string(),
+                };
                 let _ = db::MessageDb {
                     id: 0,
                     contact_onion_id: to.to_string(),
@@ -605,9 +637,7 @@ impl RpcCommand {
                 .insert(client.db_conn.clone())
                 .await?;
 
-                return Err(error::RpcError::AttachmentError(
-                    e
-                ));
+                return Err(error::RpcError::AttachmentError(e));
             }
         };
         let message = MessageContent::Image { data: image_bytes };

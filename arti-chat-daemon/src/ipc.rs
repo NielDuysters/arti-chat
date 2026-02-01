@@ -1,14 +1,15 @@
 //! Logic to communicate between the daemon and the desktop app using Inter-process communication.
 
 use crate::{client, error::IpcError, rpc};
+use interprocess::local_socket::{
+    GenericFilePath, GenericNamespaced, ListenerOptions,
+    tokio::{Stream, prelude::*},
+};
 use tokio::sync::Mutex as TokioMutex;
 use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, WriteHalf, ReadHalf},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, ReadHalf, WriteHalf},
     sync::mpsc::{self, UnboundedSender},
 };
- use interprocess::local_socket::{
-            tokio::{prelude::*, Stream},
-            GenericFilePath, GenericNamespaced, ListenerOptions};
 
 /// Names for sockets.
 #[non_exhaustive]
@@ -25,9 +26,7 @@ impl SocketNames {
                 .to_ns_name::<GenericNamespaced>()
                 .unwrap()
         } else {
-            Self::BROADCAST_FS
-                .to_fs_name::<GenericFilePath>()
-                .unwrap()
+            Self::BROADCAST_FS.to_fs_name::<GenericFilePath>().unwrap()
         }
     }
 
@@ -38,9 +37,7 @@ impl SocketNames {
                 .to_ns_name::<GenericNamespaced>()
                 .unwrap()
         } else {
-            Self::RPC_FS
-                .to_fs_name::<GenericFilePath>()
-                .unwrap()
+            Self::RPC_FS.to_fs_name::<GenericFilePath>().unwrap()
         }
     }
 
@@ -164,7 +161,7 @@ pub async fn run_ipc_server(
 /// Writes to UI whenever daemon demands it.
 async fn ui_write_loop(
     mut rx: mpsc::UnboundedReceiver<MessageToUI>, // Receives messages pushed by daemon.
-    mut write_half: WriteHalf<Stream>,               // Writer handle to UI.
+    mut write_half: WriteHalf<Stream>,            // Writer handle to UI.
 ) {
     while let Some(msg) = rx.recv().await {
         let msg = match msg {
@@ -181,7 +178,7 @@ async fn ui_write_loop(
 
 /// Handle a RPC call coming from the UI.
 async fn handle_rpc_call(
-    read_half: ReadHalf<Stream>,             // Read incoming RPC call.
+    read_half: ReadHalf<Stream>,          // Read incoming RPC call.
     tx_rpc: UnboundedSender<MessageToUI>, // Reply to current RPC call.
     tx_broadcast: Option<UnboundedSender<MessageToUI>>, // Write to UI.
     client: std::sync::Arc<client::Client>,

@@ -435,12 +435,12 @@ impl MessageDb {
         let mut stmt = conn.prepare("UPDATE contact SET last_viewed_at = ? WHERE onion_id = ?")?;
         stmt.execute(params![ts, onion_id])?;
 
-        let mut sql = 
-            "SELECT * FROM MESSAGE
+        let mut sql = "SELECT * FROM MESSAGE
              WHERE
                 contact_onion_id = ?
              ORDER BY
-                timestamp DESC".to_string();
+                timestamp DESC"
+            .to_string();
 
         if limit.is_some() {
             sql.push_str(" LIMIT ?");
@@ -450,11 +450,11 @@ impl MessageDb {
         }
 
         let mut stmt = conn.prepare(&sql)?;
-        
+
         let limit_i64;
         let offset_i64;
 
-        let mut params : Vec<&dyn rusqlite::ToSql> = Vec::new();
+        let mut params: Vec<&dyn rusqlite::ToSql> = Vec::new();
         params.push(&onion_id);
         if let Some(limit) = limit {
             limit_i64 = *limit as i64;

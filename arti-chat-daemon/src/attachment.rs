@@ -1,7 +1,7 @@
 //! Logic to handle encoding and decoding of attachments.
 
 use image::{DynamicImage, GenericImageView, codecs::jpeg::JpegEncoder};
-use std::io::{Read, BufReader};
+use std::io::{BufReader, Read};
 
 use crate::error::AttachmentError;
 
@@ -27,7 +27,9 @@ pub fn reencode_image_to_bytes<P: AsRef<std::path::Path>>(
 
     // Check max file size.
     if bytes.len() > MAX_FILE_SIZE {
-        return Err(AttachmentError::FileSizeExceedsLimit(MAX_FILE_SIZE.to_string()));
+        return Err(AttachmentError::FileSizeExceedsLimit(
+            MAX_FILE_SIZE.to_string(),
+        ));
     }
 
     // Decode.
@@ -37,14 +39,14 @@ pub fn reencode_image_to_bytes<P: AsRef<std::path::Path>>(
 }
 
 /// Reencode bytes of incoming message.
-pub fn reencode_bytes(
-    input: Vec<u8>,
-) -> Result<Vec<u8>, AttachmentError> {
+pub fn reencode_bytes(input: Vec<u8>) -> Result<Vec<u8>, AttachmentError> {
     // Check file size.
     if input.len() > MAX_FILE_SIZE {
-        return Err(AttachmentError::FileSizeExceedsLimit(MAX_FILE_SIZE.to_string()));
+        return Err(AttachmentError::FileSizeExceedsLimit(
+            MAX_FILE_SIZE.to_string(),
+        ));
     }
-    
+
     // Incoming bytes should always be JPEG.
     if input.len() < 2 || input[0] != 0xFF || input[1] != 0xD8 {
         return Err(AttachmentError::FileUnsupportedFormat);
@@ -57,13 +59,13 @@ pub fn reencode_bytes(
 }
 
 /// Shared reencode implementation.
-fn reencode_image(
-    image: DynamicImage,
-) -> Result<Vec<u8>, AttachmentError> {
+fn reencode_image(image: DynamicImage) -> Result<Vec<u8>, AttachmentError> {
     // Check max width and height.
     let (x, y) = image.dimensions();
     if x > 1025 || y > 1025 {
-        return Err(AttachmentError::ImageDimensionsExceedsLimit("1025 x 1025px".to_string()));
+        return Err(AttachmentError::ImageDimensionsExceedsLimit(
+            "1025 x 1025px".to_string(),
+        ));
     }
 
     // Copy to clean buffer.
@@ -78,4 +80,3 @@ fn reencode_image(
 
     Ok(output)
 }
-

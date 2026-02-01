@@ -2,8 +2,8 @@
 //! This to provide forward secrecy.
 
 use chacha20poly1305::{
-    aead::{Aead, KeyInit},
     ChaCha20Poly1305, Key, Nonce,
+    aead::{Aead, KeyInit},
 };
 use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
 use tokio::io::AsyncReadExt;
@@ -36,11 +36,7 @@ impl RatchetChain {
     }
 
     /// Encrypt plaintext data + do next step in send chain.
-    pub fn encrypt(
-        &mut self,
-        plaintext: &[u8],
-        self_onion_id: String,
-    ) -> EncryptedMessage {
+    pub fn encrypt(&mut self, plaintext: &[u8], self_onion_id: String) -> EncryptedMessage {
         let (current_key, next_key) = Self::next_step(&self.send_chain);
         self.send_chain = next_key;
 
@@ -58,10 +54,7 @@ impl RatchetChain {
     }
 
     /// Decrypt encrypted message + do next step in receive chain.
-    pub fn decrypt(
-        &mut self,
-        msg: &EncryptedMessage,
-    ) -> Result<Vec<u8>, RatchetError> {
+    pub fn decrypt(&mut self, msg: &EncryptedMessage) -> Result<Vec<u8>, RatchetError> {
         let (current_key, next_key) = Self::next_step(&self.recv_chain);
         self.recv_chain = next_key;
 
@@ -124,7 +117,7 @@ impl Handshake {
                 ephemeral_pub_key: ephemeral_pub_key.to_bytes(),
                 signature,
             },
-            ephemeral_priv_key
+            ephemeral_priv_key,
         )
     }
 
@@ -158,7 +151,7 @@ impl Handshake {
                 ephemeral_pub_key: ephemeral_pub_key.to_bytes(),
                 signature: signature_reply,
             },
-            ephemeral_priv_key
+            ephemeral_priv_key,
         ))
     }
 
@@ -180,15 +173,18 @@ impl Handshake {
         peer_public_key.verify_strict(&t, &signature)?;
 
         // Shared DH secret.
-        let shared_secret = self_ephemeral_priv_key.diffie_hellman(&PublicKey::from(self.ephemeral_pub_key));
+        let shared_secret =
+            self_ephemeral_priv_key.diffie_hellman(&PublicKey::from(self.ephemeral_pub_key));
 
         // Derive key chains for sending and receiving.
         let hk = hkdf::Hkdf::<sha2::Sha256>::new(None, shared_secret.as_bytes());
         let mut a = [0_u8; 32];
         let mut b = [0_u8; 32];
-        hk.expand(&[], &mut a).map_err(|_| RatchetError::HkdfInvalidLength)?;
-        hk.expand(&[], &mut b).map_err(|_| RatchetError::HkdfInvalidLength)?;
-    
+        hk.expand(&[], &mut a)
+            .map_err(|_| RatchetError::HkdfInvalidLength)?;
+        hk.expand(&[], &mut b)
+            .map_err(|_| RatchetError::HkdfInvalidLength)?;
+
         let (send_chain, recv_chain) = if is_initiator { (a, b) } else { (b, a) };
         Ok(RatchetChain {
             send_chain,
@@ -207,7 +203,7 @@ pub struct EncryptedMessage {
     /// Message data / payload.
     pub data: Vec<u8>,
 }
-    
+
 /// Unencrypted message.
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct PlaintextPayload {
@@ -224,7 +220,9 @@ pub struct PlaintextPayload {
 /// Get VerifyingKey from hex string.
 pub fn verifying_key_from_hex(hex_pk: &str) -> Result<VerifyingKey, RatchetError> {
     let bytes = hex::decode(hex_pk)?;
-    let arr: [u8; 32] = bytes.try_into().map_err(|_| RatchetError::InvalidKeyLength)?;
+    let arr: [u8; 32] = bytes
+        .try_into()
+        .map_err(|_| RatchetError::InvalidKeyLength)?;
     Ok(VerifyingKey::from_bytes(&arr)?)
 }
 
@@ -232,7 +230,6 @@ pub fn verifying_key_from_hex(hex_pk: &str) -> Result<VerifyingKey, RatchetError
 pub async fn read_null_terminated<S: tokio::io::AsyncRead + Unpin>(
     stream: &mut S,
 ) -> Result<String, RatchetError> {
-
     let mut buffer = Vec::new();
     let mut byte = [0_u8; 1];
 
