@@ -17,6 +17,12 @@ pub enum RpcCommand {
     LoadChat {
         /// Onion ID of the contact whose chat should be loaded.
         onion_id: String,
+
+        /// Start loading messages from this offset.
+        offset: Option<usize>,
+
+        /// Limit amount of loaded messages.
+        limit: Option<usize>,
     },
 
     /// Send a message to a contact.
@@ -195,8 +201,8 @@ impl RpcCommand {
                 self.handle_load_contacts(tx_rpc, client.db_conn.clone())
                     .await
             }
-            RpcCommand::LoadChat { onion_id } => {
-                self.handle_load_chat(onion_id, tx_rpc, client.db_conn.clone())
+            RpcCommand::LoadChat { onion_id, offset, limit } => {
+                self.handle_load_chat(onion_id, offset, limit, tx_rpc, client.db_conn.clone())
                     .await
             }
             RpcCommand::SendMessage { to, text } => {
@@ -306,10 +312,12 @@ impl RpcCommand {
     async fn handle_load_chat(
         &self,
         onion_id: &str,
+        offset: &Option<usize>,
+        limit: &Option<usize>,
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
         db_conn: db::DatabaseConnection,
     ) -> Result<(), RpcError> {
-        let messages = db::MessageDb::retrieve_messages(onion_id, db_conn.clone()).await?;
+        let messages = db::MessageDb::retrieve_messages(onion_id, offset, limit, db_conn.clone()).await?;
 
         LoadChatResponse {
             messages: messages
@@ -504,13 +512,11 @@ impl RpcCommand {
         client: &client::Client,
         tx: &tokio::sync::mpsc::UnboundedSender<MessageToUI>,
     ) -> Result<(), RpcError> {
-        println!("CONFIG FOR {key}");
         let key = key
             .parse::<ClientConfigKey>()
             .map_err(|_| error::ClientError::InvalidConfigKey)?;
         let cfg = client.config.lock().await;
         let value = cfg.get(&key);
-        println!("CONFIG VAL {value}");
         GetConfigValueResponse { value }.send_rpc_reply(tx)
     }
 

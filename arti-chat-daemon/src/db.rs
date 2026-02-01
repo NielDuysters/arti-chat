@@ -3,7 +3,7 @@
 use crate::error;
 use async_trait::async_trait;
 use rand::RngCore;
-use rusqlite::{Connection, Row, ToSql, params};
+use rusqlite::{Connection, Row, ToSql, params, params_from_iter};
 use tokio::sync::Mutex as TokioMutex;
 
 /// Type for rusqlite database connection.
@@ -425,6 +425,8 @@ impl MessageDb {
     /// Retrieve messages for chat.
     pub async fn retrieve_messages(
         onion_id: &str,
+        offset: &Option<usize>,
+        limit: &Option<usize>,
         conn: DatabaseConnection,
     ) -> Result<Vec<Self>, error::DatabaseError> {
         let conn = conn.lock().await;
@@ -433,15 +435,37 @@ impl MessageDb {
         let mut stmt = conn.prepare("UPDATE contact SET last_viewed_at = ? WHERE onion_id = ?")?;
         stmt.execute(params![ts, onion_id])?;
 
-        let mut stmt = conn.prepare(
+        let mut sql = 
             "SELECT * FROM MESSAGE
              WHERE
                 contact_onion_id = ?
              ORDER BY
-                timestamp ASC",
-        )?;
+                timestamp DESC".to_string();
 
-        let rows = stmt.query_map(params![onion_id], |row| Self::from_row(row))?;
+        if limit.is_some() {
+            sql.push_str(" LIMIT ?");
+        }
+        if offset.is_some() {
+            sql.push_str(" OFFSET ?");
+        }
+
+        let mut stmt = conn.prepare(&sql)?;
+        
+        let limit_i64;
+        let offset_i64;
+
+        let mut params : Vec<&dyn rusqlite::ToSql> = Vec::new();
+        params.push(&onion_id);
+        if let Some(limit) = limit {
+            limit_i64 = *limit as i64;
+            params.push(&limit_i64);
+        }
+        if let Some(offset) = offset {
+            offset_i64 = *offset as i64;
+            params.push(&offset_i64);
+        }
+
+        let rows = stmt.query_map(params_from_iter(params), |row| Self::from_row(row))?;
 
         let mut results = Vec::new();
         for row in rows {
