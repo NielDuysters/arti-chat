@@ -77,6 +77,7 @@ The instructions for Microsoft Windows can be found [here](microsoft-windows-ins
 - [ ] Solve bugs and instability issues.
 - [x] Option to send images.
 - [ ] Group chat?
+- [x] Basic CI.
 
 **Arti Chat - alpha-v0.1.0:**
 - [ ] Solid code + architecture.
@@ -91,7 +92,7 @@ The instructions for Microsoft Windows can be found [here](microsoft-windows-ins
 - [x] Windows support.
 - [ ] Improved install script.
 - [ ] Improved UI/UX.
-- [ ] Add CI.
+- [ ] Improved CI.
 
 **Arti Chat - beta-v0.3.0:**
 - [ ] Secure and stable enough for actual usage.
