@@ -59,3 +59,21 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
       - run: cargo clippy --workspace --all-targets -- -D warnings
+  tsc:
+    name: tsc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install deps
+        run: | 
+          npm install
+          npm install typescript
+        working-directory: arti-chat-desktop-app
+      - name: Run typescript checks
+        run: npm run tschecks
+        working-directory: arti-chat-desktop-app
+ 
