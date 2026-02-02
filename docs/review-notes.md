@@ -29,7 +29,7 @@ This project contains three parts:
 - arti-chat-daemon-bin: Small binary calling arti-chat-daemon, this bin is served as a daemon.
 - arti-chat-desktop-app: GUI
 
-We GUI communicates with the core using IPC.
+The GUI communicates with the core using IPC.
 
 - Are there any disadvantages to the architecture?
 - How could it be improved?
