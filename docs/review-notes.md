@@ -6,7 +6,7 @@ This project is still a draft and far from finalized but feedback on the followi
 
 - What part of the current setup worries you most?
 - If you could fix one thing in this, what would it be?
-- Where would you try to attack this app if you were an advesary? Where do you suspect there are vulnerabilities?
+- Where would you try to attack this app if you were an advesary? Where do you suspect vulnerabilities exist?
 
 ## Rust code
 
