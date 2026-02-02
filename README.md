@@ -107,4 +107,4 @@ The instructions for Microsoft Windows can be found [here](microsoft-windows-ins
 
 ## Contribute
 
-I'm interested in receiving feedback on the code and architecture. A small code-review or tips are appreciated!
+I'm interested in receiving feedback on the code and architecture. Small code-reviews or tips are appreciated! Feel free to take a look at the [review notes](docs/review-notes.md).
