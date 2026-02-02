@@ -1,4 +1,4 @@
-# Review Notes
+# Review notes
 
 This project is still a draft and far from finalized but feedback on the following topics would already be very welcome!
 
