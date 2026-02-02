@@ -15,6 +15,7 @@ This project is still a draft and far from finalized but feedback on the followi
 - Is my code readable?
 - Am I handling async and threading correctly?
 - How is my error handling?
+- PS. cargo clippy will be fixed soon.
 
 ## Project file structure
 
