@@ -14,6 +14,7 @@ use crate::error::RatchetError;
 use crate::message::MessageContent;
 
 /// Send and receive chain.
+#[non_exhaustive]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct RatchetChain {
     /// To encrypt sending messages.
@@ -25,12 +26,14 @@ pub struct RatchetChain {
 impl RatchetChain {
     /// Next step in ratchet.
     fn next_step(chain: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
-        let hk = hkdf::Hkdf::<sha2::Sha256>::from_prk(chain).expect("valid PRK");
+        let hk = hkdf::Hkdf::<sha2::Sha256>::from_prk(chain).expect("Invalid PRK");
 
-        let mut msg = [0u8; 32];
-        let mut next = [0u8; 32];
-        hk.expand(&[], &mut msg).unwrap();
-        hk.expand(&[], &mut next).unwrap();
+        let mut msg = [0_u8; 32];
+        let mut next = [0_u8; 32];
+        hk.expand(&[], &mut msg)
+            .expect("RFC5869 HKDF-Expand operation failed");
+        hk.expand(&[], &mut next)
+            .expect("RFC5869 HKDF-Expand operation failed");
 
         (msg, next)
     }
@@ -74,6 +77,7 @@ impl Drop for RatchetChain {
 }
 
 /// Handshake to establish or accept a session.
+#[non_exhaustive]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Handshake {
     /// Origin of handshake.
@@ -147,7 +151,7 @@ impl Handshake {
         Ok((
             Self {
                 from: self_onion_id.into(),
-                to: self.from.to_string(),
+                to: self.from.clone(),
                 ephemeral_pub_key: ephemeral_pub_key.to_bytes(),
                 signature: signature_reply,
             },
@@ -160,7 +164,7 @@ impl Handshake {
         &self,
         self_onion_id: &str,
         peer_public_key: &VerifyingKey,
-        self_ephemeral_priv_key: StaticSecret,
+        self_ephemeral_priv_key: &StaticSecret,
         is_initiator: bool,
     ) -> Result<RatchetChain, RatchetError> {
         if self.to != self_onion_id {
@@ -194,6 +198,7 @@ impl Handshake {
 }
 
 /// Encrypted ciphertext.
+#[non_exhaustive]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct EncryptedMessage {
     /// Origin of message.
@@ -205,6 +210,7 @@ pub struct EncryptedMessage {
 }
 
 /// Unencrypted message.
+#[non_exhaustive]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct PlaintextPayload {
     /// Sender or receiver.

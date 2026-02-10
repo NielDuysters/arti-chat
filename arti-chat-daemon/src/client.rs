@@ -121,7 +121,7 @@ impl Client {
         // the user will not be inserted nor updated.
         let onion_id = Self::get_identity_unredacted_inner(onion_service.onion_address())?;
         let _ = db::UserDb {
-            onion_id: onion_id.to_string(),
+            onion_id: onion_id.clone(),
             nickname: "Me".to_string(),
             private_key,
             public_key,
@@ -257,7 +257,7 @@ impl Client {
                         pub onion_id: String,
                     }
                     let incoming_message = SendIncomingMessage {
-                        onion_id: msg.contact_onion_id.to_string(),
+                        onion_id: msg.contact_onion_id.clone(),
                     };
                     let incoming_message = serde_json::to_string(&incoming_message)? + "\n";
                     let bw_writers = broadcast_writers.lock().await;
@@ -444,7 +444,7 @@ impl Client {
                     let ratchet_chain = handshake.complete(
                         &my_onion_id,
                         &peer_public_key,
-                        ephemeral_secret,
+                        &ephemeral_secret,
                         false,
                     )?;
 
@@ -477,7 +477,7 @@ impl Client {
                             }
                         } else {
                             MessageContent::Image {
-                                data: attachment::reencode_bytes(data)?,
+                                data: attachment::reencode_bytes(&data)?,
                             }
                         }
                     }
@@ -548,7 +548,7 @@ impl Client {
         let ratchet = handshake_response.complete(
             &self_onion_id,
             &peer_public_key,
-            self_ephemeral_secret,
+            &self_ephemeral_secret,
             true,
         )?;
 

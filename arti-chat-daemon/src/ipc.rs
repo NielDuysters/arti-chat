@@ -16,7 +16,9 @@ use tokio::{
 pub struct SocketNames;
 
 impl SocketNames {
+    /// Path to broadcast sock (back-up option if GenericNamespaced is not supported).
     const BROADCAST_FS: &'static str = "/tmp/arti-chat.broadcast.sock";
+    /// Path to RPC sock (back-up option if GenericNamespaced is not supported).
     const RPC_FS: &'static str = "/tmp/arti-chat.rpc.sock";
 
     /// Broadcast socket name.
@@ -24,9 +26,11 @@ impl SocketNames {
         if GenericNamespaced::is_supported() {
             "arti-chat.broadcast.sock"
                 .to_ns_name::<GenericNamespaced>()
-                .unwrap()
+                .expect("Failed to convert to GenericNamespaced")
         } else {
-            Self::BROADCAST_FS.to_fs_name::<GenericFilePath>().unwrap()
+            Self::BROADCAST_FS
+                .to_fs_name::<GenericFilePath>()
+                .expect("Failed to convert to GenericFilePath")
         }
     }
 
@@ -35,9 +39,11 @@ impl SocketNames {
         if GenericNamespaced::is_supported() {
             "arti-chat.rpc.sock"
                 .to_ns_name::<GenericNamespaced>()
-                .unwrap()
+                .expect("Failed to convert to GenericNamespaced")
         } else {
-            Self::RPC_FS.to_fs_name::<GenericFilePath>().unwrap()
+            Self::RPC_FS
+                .to_fs_name::<GenericFilePath>()
+                .expect("Failed to convert to GenericFilePath")
         }
     }
 
@@ -98,7 +104,7 @@ pub async fn run_ipc_server(
             Some(message) = message_rx.recv() => {
                 // Send to all broadcast listeners and remove dead listeners.
                 broadcast_writers.lock().await.retain(|tx| {
-                    tx.send(MessageToUI::Broadcast(message.to_string() + "\n")).is_ok()
+                    tx.send(MessageToUI::Broadcast(message.clone() + "\n")).is_ok()
                 });
             }
 

@@ -35,11 +35,11 @@ pub fn reencode_image_to_bytes<P: AsRef<std::path::Path>>(
     // Decode.
     let image: DynamicImage = image::load_from_memory(&bytes)?;
 
-    reencode_image(image)
+    reencode_image(&image)
 }
 
 /// Reencode bytes of incoming message.
-pub fn reencode_bytes(input: Vec<u8>) -> Result<Vec<u8>, AttachmentError> {
+pub fn reencode_bytes(input: &[u8]) -> Result<Vec<u8>, AttachmentError> {
     // Check file size.
     if input.len() > MAX_FILE_SIZE {
         return Err(AttachmentError::FileSizeExceedsLimit(
@@ -53,13 +53,13 @@ pub fn reencode_bytes(input: Vec<u8>) -> Result<Vec<u8>, AttachmentError> {
     }
 
     // Decode.
-    let image: DynamicImage = image::load_from_memory(&input)?;
+    let image: DynamicImage = image::load_from_memory(input)?;
 
-    reencode_image(image)
+    reencode_image(&image)
 }
 
 /// Shared reencode implementation.
-fn reencode_image(image: DynamicImage) -> Result<Vec<u8>, AttachmentError> {
+fn reencode_image(image: &DynamicImage) -> Result<Vec<u8>, AttachmentError> {
     // Check max width and height.
     let (x, y) = image.dimensions();
     if x > 1025 || y > 1025 {

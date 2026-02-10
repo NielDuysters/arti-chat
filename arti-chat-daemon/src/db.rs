@@ -465,7 +465,7 @@ impl MessageDb {
             params.push(&offset_i64);
         }
 
-        let rows = stmt.query_map(params_from_iter(params), |row| Self::from_row(row))?;
+        let rows = stmt.query_map(params_from_iter(params), Self::from_row)?;
 
         let mut results = Vec::new();
         for row in rows {
@@ -495,7 +495,7 @@ impl MessageDb {
                 timestamp DESC",
         )?;
 
-        let rows = stmt.query_map([], |row| Self::from_row(row))?;
+        let rows = stmt.query_map([], Self::from_row)?;
 
         let mut results = Vec::new();
         for row in rows {
